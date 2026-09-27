@@ -5,7 +5,6 @@
 //  Created by samara on 22.08.2024.
 //  Copyright © 2024 Lakr Aream. All Rights Reserved.
 //  ORIGINALLY LICENSED UNDER GPL-3.0, MODIFIED FOR USE FOR FEATHER
-//  Modified for AshteMobile - Strict No-Cache Rules for OTA Install ⚡️
 //
 
 import Foundation
@@ -53,20 +52,16 @@ class ServerInstaller: Identifiable, ObservableObject {
 			switch req.url.path {
 			case plistEndpoint.path:
 				self._updateStatus(.sendingManifest)
-                // 💡 چارەسەری یەکجاری: ناچارکردنی ئایفۆن کە فایلەکە هەرگیز خەزن نەکات
 				return Response(status: .ok, version: req.version, headers: [
 					"Content-Type": "text/xml",
-                    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-                    "Pragma": "no-cache",
-                    "Expires": "0"
 				], body: .init(data: installManifestData))
 			case displayImageSmallEndpoint.path:
 				return Response(status: .ok, version: req.version, headers: [
-					"Content-Type": "image/png"
+					"Content-Type": "image/png",
 				], body: .init(data: displayImageSmallData))
 			case displayImageLargeEndpoint.path:
 				return Response(status: .ok, version: req.version, headers: [
-					"Content-Type": "image/png"
+					"Content-Type": "image/png",
 				], body: .init(data: displayImageLargeData))
 			case payloadEndpoint.path:
 				guard let packageUrl = packageUrl else {
@@ -87,11 +82,9 @@ class ServerInstaller: Identifiable, ObservableObject {
 
 				}
 			case "/install":
-                // 💡 ڕێگریکردن لە خەزنکردنی پەڕەی ئینستاڵەکەش
-				return Response(status: .ok, headers: [
-                    "Content-Type": "text/html",
-                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
-                ], body: .init(string: self.html))
+				var headers = HTTPHeaders()
+				headers.add(name: .contentType, value: "text/html")
+				return Response(status: .ok, headers: headers, body: .init(string: self.html))
 			default:
 				return Response(status: .notFound)
 			}
