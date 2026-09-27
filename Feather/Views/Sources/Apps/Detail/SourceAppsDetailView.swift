@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samsam on 7/25/25.
-//  Modified for AshteMobile - Removed "What's New" section for cleaner UI ⚡️
+//  Modified for AshteMobile - Independent Sources Install Trigger & Clean UI ⚡️
 //
 
 import SwiftUI
@@ -11,14 +11,23 @@ import Combine
 import AltSourceKit
 import NimbleViews
 import NukeUI
+import CoreData // 💡 زیادکرا بۆ هێنانی داتای بەرنامە واژووکراوەکان
 
 // MARK: - SourceAppsDetailView
 struct SourceAppsDetailView: View {
 	@ObservedObject var downloadManager = DownloadManager.shared
 	@State private var _downloadProgress: Double = 0
-	@State var cancellable: AnyCancellable? // Combine
+	@State var cancellable: AnyCancellable?
 	@State private var _isScreenshotPreviewPresented: Bool = false
 	@State private var _selectedScreenshotIndex: Int = 0
+    
+    // 💡 گۆڕاوەکان بۆ پیشاندانی پەنجەرەی ئینستاڵی تایبەت بە Sources
+    @State private var _selectedInstallAppPresenting: AnyApp?
+    @FetchRequest(
+        entity: Signed.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)],
+        animation: .snappy
+    ) private var _signedApps: FetchedResults<Signed>
 	
 	var currentDownload: Download? {
 		downloadManager.getDownload(by: app.currentUniqueId)
@@ -76,7 +85,7 @@ struct SourceAppsDetailView: View {
                     Divider()
                 }
 				
-				// 💡 بەشی "What's New" لێرەدا بوو، بە یەکجاری سڕایەوە بۆ ئەوەی دیزاینەکە خاوێن بێت
+				// 💡 بەشی "What's New" سڕاوەتەوە بۆ ئەوەی دیزاینەکە خاوێن بێت
 				
 				if let appDesc = app.localizedDescription {
 					NBSection(.localized("Description")) {
@@ -188,6 +197,27 @@ struct SourceAppsDetailView: View {
 				)
 			}
 		}
+        // 💡 بەشی پیشاندانی پەنجەرەی ئینستاڵ
+        .sheet(item: $_selectedInstallAppPresenting) { app in
+            InstallPreviewView(app: app.base, isSharing: app.archive)
+                .presentationDetents([.height(200)])
+                .presentationDragIndicator(.visible)
+        }
+        // 💡 وەرگرتنی فەرمانی ئینستاڵ تەنها لە بەشی Sources
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Sources"))) { _ in
+            let now = Date().timeIntervalSince1970
+            let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
+            
+            if now - lastTime > 2.0 {
+                UserDefaults.standard.set(now, forKey: "AshteMobile.GlobalInstallLock")
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if let latest = _signedApps.first {
+                        _selectedInstallAppPresenting = AnyApp(base: latest)
+                    }
+                }
+            }
+        }
     }
 	
 	var standardIcon: some View {
