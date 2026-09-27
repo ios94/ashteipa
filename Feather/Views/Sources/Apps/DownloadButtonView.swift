@@ -3,7 +3,6 @@
 //  AshteMobile
 //
 //  Created by samsam on 7/25/25.
-//  Modified for AshteMobile - Independent Sources Install Trigger ⚡️
 //
 
 import SwiftUI
@@ -169,8 +168,7 @@ struct DownloadButtonView: View {
 						if options.post_deleteAppAfterSigned {
 							Storage.shared.deleteApp(for: importedApp)
 						}
-						// 💡 لێرەدا فەرمانەکەمان جیاکردەوە تەنها بۆ بەشی Sources
-						NotificationCenter.default.post(name: Notification.Name("AshteMobile.Install.Sources"), object: nil)
+						NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: nil)
 					} else {
 						let errorGenerator = UINotificationFeedbackGenerator()
 						errorGenerator.notificationOccurred(.error)
