@@ -1,5 +1,3 @@
-سه يري بكه ئه وه يه 
-
 //
 //  Server+Compute.swift
 //  ashtemobile
