@@ -1,3 +1,5 @@
+سه يري بكه ئه وه يه 
+
 //
 //  Server+Compute.swift
 //  ashtemobile
@@ -16,8 +18,6 @@ extension ServerInstaller {
 		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
 		comps.host = sni()
 		comps.path = "/\(id).plist"
-        // 💡 ڕێگریکردن لە خەزنکردنی لۆکاڵی
-        comps.queryItems = [.init(name: "nocache", value: UUID().uuidString)]
 		comps.port = port
 		return comps.url!
 	}
@@ -36,7 +36,6 @@ extension ServerInstaller {
 		comps.scheme = "http"
 		comps.host = "127.0.0.1"
 		comps.path = "/install"
-        comps.queryItems = [.init(name: "nocache", value: UUID().uuidString)]
 		comps.port = port
 		return comps.url!
 	}
@@ -51,8 +50,6 @@ extension ServerInstaller {
 			.init(name: "name", value: app.name),
 			.init(name: "version", value: app.version),
 			.init(name: "fetchurl", value: payloadEndpoint.absoluteString),
-            // 💡 چارەسەری یەکجاری بۆ کێشەی ناوە کۆنەکە! ئەمە ئایفۆن ناچار دەکات هەموو جارێک ناوی نوێ بهێنێت.
-            .init(name: "nocache", value: UUID().uuidString)
 		]
 
 		return components.url!
