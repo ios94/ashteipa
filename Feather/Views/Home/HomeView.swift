@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  100% Clean Pro UI with Independent Home Trigger & Cache Fix ⚡️
+//  100% Clean Pro UI with Concurrent Signing Fix ⚡️
 //
 
 import SwiftUI
@@ -13,11 +13,6 @@ import Foundation
 import UIKit
 import Combine
 import CoreData
-
-// MARK: - Global Lock
-class HomeGlobalLock {
-    static var isSigningActive = false
-}
 
 // MARK: - Tab Categories
 enum HomeCategoryTab: String, CaseIterable, Identifiable {
@@ -273,23 +268,23 @@ struct HomeView: View {
                 .presentationDetents([.height(200)])
                 .presentationDragIndicator(.visible)
         }
-        // 💡 لێرەدا گوێگرتنەکەمان تایبەت کرد بە بەشی Home و کێشەی ئەپە کۆنەکەمان چارەسەر کرد
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Home"))) { _ in
-            let now = Date().timeIntervalSince1970
-            let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
+        // 💡 لێرەدا کێشەی هێنانەوەی ناوی یەکەم بەرنامەمان بە یەکجاری چارەسەر کرد!
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Home"))) { notification in
+            // ناوی ئەو ئەپە وەردەگرین کە کەمێک پێش ئێستا واژوو کرا
+            let targetAppName = notification.object as? String ?? ""
             
-            if now - lastTime > 2.0 {
-                UserDefaults.standard.set(now, forKey: "AshteMobile.GlobalInstallLock")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                let request = NSFetchRequest<Signed>(entityName: "Signed")
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \Signed.date, ascending: false)]
+                request.fetchLimit = 10
                 
-                // 💡 کەمێک کات دەدەین بۆ ئەوەی ئەپە نوێیەکە بەتەواوی سەیڤ ببێت لە داتابەیس
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                    // 💡 ڕاستەوخۆ لە داتابەیس دەیهێنین بۆ ئەوەی ئەپە کۆنەکەمان نەداتێ!
-                    let request = NSFetchRequest<Signed>(entityName: "Signed")
-                    request.sortDescriptors = [NSSortDescriptor(keyPath: \Signed.date, ascending: false)]
-                    request.fetchLimit = 1
-                    
-                    if let latest = try? Storage.shared.context.fetch(request).first {
-                        _selectedInstallAppPresenting = AnyApp(base: latest)
+                if let signedApps = try? Storage.shared.context.fetch(request) {
+                    // 💡 ڕێک دەگەڕێین بەدوای ئەو ئەپەی کە ناوەکەی لەگەڵ ئەوەی ئێستا واژوو کراوە یەک دەگرێتەوە
+                    if let exactApp = signedApps.first(where: { 
+                        let name = ($0.value(forKey: "name") as? String) ?? ""
+                        return name == targetAppName 
+                    }) ?? signedApps.first {
+                        _selectedInstallAppPresenting = AnyApp(base: exactApp)
                     }
                 }
             }
@@ -299,22 +294,22 @@ struct HomeView: View {
     @Namespace private var tabAnimation
     
     private func handleAutoSign(for app: AshteHomeAppModel) {
-        if HomeGlobalLock.isSigningActive { return }
-        HomeGlobalLock.isSigningActive = true
-        
         if installationMethod == 1 {
-            HomeGlobalLock.isSigningActive = false
             return
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let request = NSFetchRequest<Imported>(entityName: "Imported")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Imported.date, ascending: false)]
-            request.fetchLimit = 1 
+            request.fetchLimit = 10 
             
-            guard let importedApps = try? Storage.shared.context.fetch(request),
-                  let importedApp = importedApps.first else {
-                HomeGlobalLock.isSigningActive = false
+            guard let importedApps = try? Storage.shared.context.fetch(request) else { return }
+            
+            // 💡 ڕێگری لە تێکەڵبوونی ئەپەکان دەکەین بە دۆزینەوەی ئەپە ڕاستەقینەکە لەناو داتابەیسدا
+            guard let importedApp = importedApps.first(where: { 
+                let name = ($0.value(forKey: "name") as? String) ?? ""
+                return name.localizedCaseInsensitiveContains(app.name) || app.name.localizedCaseInsensitiveContains(name) 
+            }) ?? importedApps.first else {
                 return
             }
             
@@ -332,15 +327,16 @@ struct HomeView: View {
                 certificate: selectedCert
             ) { error in
                 DispatchQueue.main.async {
-                    HomeGlobalLock.isSigningActive = false
                     if error == nil {
                         if options.post_deleteAppAfterSigned {
                             Storage.shared.deleteApp(for: importedApp)
                         }
                         
+                        let signedName = (importedApp.value(forKey: "name") as? String) ?? app.name
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
-                        // 💡 لێرەدا فەرمانی ئینستاڵەکەمان جیاکردەوە تەنها بۆ بەشی Home
-                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.Install.Home"), object: nil)
+                        
+                        // 💡 ناوی ئەپەکە دەنێرین بۆ زەنگەکە بۆ ئەوەی پەنجەرەی ئینستاڵەکە هەڵە نەکات!
+                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.Install.Home"), object: signedName)
                     } else {
                         print("Signing Error: \(String(describing: error))")
                     }
