@@ -148,11 +148,6 @@ class DownloadManager: NSObject, ObservableObject {
 
 extension DownloadManager: URLSessionDownloadDelegate {
 	
-    // 💡 ئەم فەنکشنە نوێیە ڕێگە دەدات بە بەرنامەکەت کە شوێنی لینکە گۆڕاوەکان (Redirects) بکەوێت بۆ داگرتنی فایلەکە
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(request)
-    }
-
 	func handlePachageFile(url: URL, dl: Download) throws {
 		FR.handlePackageFile(url, download: dl) { err in
 			if err != nil {
@@ -211,15 +206,13 @@ extension DownloadManager: URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard
-			let error = error, // 💡 لێرەدا دەستکاریم کرد تا ئەگەر کێشەیەک هەبوو بیخوێنێتەوە
+			let _ = error,
 			let downloadTask = task as? URLSessionDownloadTask,
 			let download = getDownloadTask(by: downloadTask)
 		else {
 			return
 		}
 		
-        print("Download Error: \(error.localizedDescription)")
-        
 		DispatchQueue.main.async {
 			if let index = self.getDownloadIndex(by: download.id) {
 				self.downloads.remove(at: index)
