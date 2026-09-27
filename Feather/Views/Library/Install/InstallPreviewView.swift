@@ -3,6 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 22.04.2025.
+//  Fixed iOS Cache Issue for Install Prompt Names ⚡️
 //
 
 import SwiftUI
@@ -203,7 +204,13 @@ struct InstallPreviewView: View {
 
 	private func _launchOTAInstall() {
 		BackgroundAudioManager.shared.start()
-		guard let url = URL(string: installer.iTunesLinkExternal) else {
+        
+        // 💡 چارەسەری کێشەی خەزنکردنی لینک (Cache) لە ئایفۆن: دانانی ژمارەی هەڕەمەکی بۆ لینکەکە
+        let originalLink = installer.iTunesLinkExternal
+        let preventCacheQuery = "&nocache=\(UUID().uuidString)"
+        let uniqueLink = originalLink + preventCacheQuery
+        
+		guard let url = URL(string: uniqueLink) else {
 			viewModel.status = .broken(NSError(
 				domain: "AshteMobile.Install",
 				code: 1,
@@ -233,9 +240,9 @@ struct InstallPreviewView: View {
 						userInfo: [NSLocalizedDescriptionKey: "iOS did not request the installation. Keep AshteMobile open and retry."]
 					))
 				}
-				}
 			}
 		}
+	}
 		
 	private func startInstallProgressPolling(
 		bundleID: String,
