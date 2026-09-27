@@ -92,9 +92,11 @@ struct InstallPreviewView: View {
 				}
 			}
 		}
-		.onAppear(perform: _install)
-        .onAppear {
+        // 💡 لێرەدا کێشەی هێنانەوەی ناوی ئەپە کۆنەکەمان بە یەکجاری ڕیشەکێش کرد!
+		.onAppear {
+            self.installer.app = self.app // 👈 سێرڤەرەکە ناچار دەکەین ئەپە نوێیەکە بخوێنێتەوە
             BackgroundAudioManager.shared.start()
+            _install()
         }
 		.onDisappear {
 			progressTask?.cancel()
@@ -233,9 +235,9 @@ struct InstallPreviewView: View {
 						userInfo: [NSLocalizedDescriptionKey: "iOS did not request the installation. Keep AshteMobile open and retry."]
 					))
 				}
-				}
 			}
 		}
+	}
 		
 	private func startInstallProgressPolling(
 		bundleID: String,
