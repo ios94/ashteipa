@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  Modernized UI Design & Fixed Double Install Prompt
+//  Modernized UI Design & Independent Library Notification Trigger ⚡️
 //
 
 import SwiftUI
@@ -323,8 +323,8 @@ struct LibraryView: View {
                     }
                 }
             }
-            // 💡 قفڵی گشتی بە UserDefaults
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { _ in
+            // 💡 لێرەدا گوێگرتنەکەمان تایبەت کرد بە بەشی Library
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Library"))) { _ in
                 let now = Date().timeIntervalSince1970
                 let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
                 
