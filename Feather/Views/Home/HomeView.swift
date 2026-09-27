@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  100% Clean Pro UI with Independent Home Notification Trigger ⚡️
+//  100% Clean Pro UI with Global Notification Trigger ⚡️
 //
 
 import SwiftUI
@@ -273,8 +273,7 @@ struct HomeView: View {
                 .presentationDetents([.height(200)])
                 .presentationDragIndicator(.visible)
         }
-        // 💡 لێرەدا گوێگرتنەکەمان تایبەت کرد بە بەشی Home
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Home"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { _ in
             let now = Date().timeIntervalSince1970
             let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
             
@@ -332,9 +331,9 @@ struct HomeView: View {
                             Storage.shared.deleteApp(for: importedApp)
                         }
                         
+                        // 💡 لێرەدا فەرمان دەنێرین بۆ فایلە سەرەکییەکە کە زەنگەکە لێبدات!
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
-                        // 💡 لێرەدا فەرمانی ئینستاڵەکەمان جیاکردەوە تەنها بۆ بەشی Home
-                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.Install.Home"), object: nil)
+                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: nil)
                     } else {
                         print("Signing Error: \(String(describing: error))")
                     }
