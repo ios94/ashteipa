@@ -3,7 +3,6 @@
 //  AshteMobile
 //
 //  Created by samara on 22.04.2025.
-//  Modified for AshteMobile - Global Success Notification Trigger ⚡️
 //
 
 import Foundation.NSURL
@@ -12,6 +11,7 @@ import Zsign
 import NimbleJSON
 import AltSourceKit
 import IDeviceSwift
+import AudioToolbox // 💡 ئەمەمان زیاد کرد بۆ لێدانی دەنگەکە
 
 enum FR {
 	static func handlePackageFile(
@@ -57,8 +57,10 @@ enum FR {
 				try await handler.modify()
 				try? await handler.clean()
 				await MainActor.run {
-                    // 💡 فەرمانی لێدانی زەنگەکە لێرەوە دەنێرین بۆ هەموو بەرنامەکە (Home, Library, Sources)
-                    NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
+                    // 💡 لێرەدا فەرمانی زەنگ و لەرزینمان دانا کاتێک واژووکردنەکە سەردەکەوێت
+                    AudioServicesPlaySystemSound(1300)
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
                     
 					completion(nil)
 				}
