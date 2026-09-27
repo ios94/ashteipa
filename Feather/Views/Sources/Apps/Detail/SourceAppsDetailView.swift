@@ -3,6 +3,7 @@
 //  AshteMobile
 //
 //  Created by samsam on 7/25/25.
+//  Modified for AshteMobile - Removed "What's New" section for cleaner UI ⚡️
 //
 
 import SwiftUI
@@ -75,29 +76,7 @@ struct SourceAppsDetailView: View {
                     Divider()
                 }
 				
-				if
-					let currentVer = app.currentVersion,
-					let whatsNewDesc = app.currentAppVersion?.localizedDescription
-				{
-					NBSection(.localized("What's New")) {
-						AppVersionInfo(
-							version: currentVer,
-							date: app.currentDate?.date,
-							description: whatsNewDesc
-						)
-                        if let versions = app.versions {
-                            NavigationLink(
-                                destination: VersionHistoryView(app: app, versions: versions)
-                                    .navigationTitle(.localized("Version History"))
-                                    .navigationBarTitleDisplayMode(.large)
-                            ) {
-                                Text(.localized("Version History"))
-                            }
-                        }
-					}
-					
-					Divider()
-				}
+				// 💡 بەشی "What's New" لێرەدا بوو، بە یەکجاری سڕایەوە بۆ ئەوەی دیزاینەکە خاوێن بێت
 				
 				if let appDesc = app.localizedDescription {
 					NBSection(.localized("Description")) {
