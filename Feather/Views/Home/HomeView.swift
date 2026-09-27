@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  100% Clean Pro UI with Global Notification Trigger ⚡️
+//  100% Clean Pro UI with Independent Home Trigger & Cache Fix ⚡️
 //
 
 import SwiftUI
@@ -273,16 +273,23 @@ struct HomeView: View {
                 .presentationDetents([.height(200)])
                 .presentationDragIndicator(.visible)
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { _ in
+        // 💡 لێرەدا گوێگرتنەکەمان تایبەت کرد بە بەشی Home و کێشەی ئەپە کۆنەکەمان چارەسەر کرد
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.Install.Home"))) { _ in
             let now = Date().timeIntervalSince1970
             let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
             
             if now - lastTime > 2.0 {
                 UserDefaults.standard.set(now, forKey: "AshteMobile.GlobalInstallLock")
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let signedApp = _signedApps.first {
-                        _selectedInstallAppPresenting = AnyApp(base: signedApp)
+                // 💡 کەمێک کات دەدەین بۆ ئەوەی ئەپە نوێیەکە بەتەواوی سەیڤ ببێت لە داتابەیس
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    // 💡 ڕاستەوخۆ لە داتابەیس دەیهێنین بۆ ئەوەی ئەپە کۆنەکەمان نەداتێ!
+                    let request = NSFetchRequest<Signed>(entityName: "Signed")
+                    request.sortDescriptors = [NSSortDescriptor(keyPath: \Signed.date, ascending: false)]
+                    request.fetchLimit = 1
+                    
+                    if let latest = try? Storage.shared.context.fetch(request).first {
+                        _selectedInstallAppPresenting = AnyApp(base: latest)
                     }
                 }
             }
@@ -331,9 +338,9 @@ struct HomeView: View {
                             Storage.shared.deleteApp(for: importedApp)
                         }
                         
-                        // 💡 لێرەدا فەرمان دەنێرین بۆ فایلە سەرەکییەکە کە زەنگەکە لێبدات!
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
-                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: nil)
+                        // 💡 لێرەدا فەرمانی ئینستاڵەکەمان جیاکردەوە تەنها بۆ بەشی Home
+                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.Install.Home"), object: nil)
                     } else {
                         print("Signing Error: \(String(describing: error))")
                     }
