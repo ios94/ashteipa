@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 3.05.2025.
-//  Modified for AshteMobile - Force .ipa + Safari User-Agent + Redirect Fix ⚡️
+//  Modified for AshteMobile - Ultimate Bulletproof Downloader Fix ⚡️
 //
 
 import Foundation
@@ -70,6 +70,19 @@ class DownloadManager: NSObject, ObservableObject {
         _session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }
     
+    // 💡 یارمەتیدەر بۆ دروستکردنی داواکارییەکی سەلامەت
+    private func createSecureRequest(for url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        // فێڵکردن لە سێرڤەر بۆ ئەوەی وا بزانێت لەناو سایتەکەی خۆیەوەین
+        if let host = url.host {
+            request.setValue("https://\(host)/", forHTTPHeaderField: "Referer")
+        }
+        return request
+    }
+    
     func startDownload(
 		from url: URL,
 		id: String = UUID().uuidString
@@ -81,10 +94,7 @@ class DownloadManager: NSObject, ObservableObject {
         
 		let download = Download(id: id, url: url)
         
-        var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-        request.setValue("*/*", forHTTPHeaderField: "Accept")
-        
+        let request = createSecureRequest(for: url)
         let task = _session.downloadTask(with: request)
         download.task = task
         task.resume()
@@ -115,10 +125,7 @@ class DownloadManager: NSObject, ObservableObject {
             task.resume()
             _updateBackgroundAudioState()
         } else if let url = download.task?.originalRequest?.url {
-            var request = URLRequest(url: url)
-            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-            request.setValue("*/*", forHTTPHeaderField: "Accept")
-            
+            let request = createSecureRequest(for: url)
             let task = _session.downloadTask(with: request)
             download.task = task
             task.resume()
@@ -157,11 +164,13 @@ class DownloadManager: NSObject, ObservableObject {
 
 extension DownloadManager: URLSessionDownloadDelegate {
     
-    // 💡 چارەسەرە گەورەکە لێرەدایە: کاتێک وێبسایتەکە باز دەدات (Redirect) بۆ لینکی دووەم، ماسکەکەی سەفاری دەپارێزین!
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         var redirectedRequest = request
         redirectedRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-        redirectedRequest.setValue("*/*", forHTTPHeaderField: "Accept")
+        redirectedRequest.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        if let host = request.url?.host {
+            redirectedRequest.setValue("https://\(host)/", forHTTPHeaderField: "Referer")
+        }
         completionHandler(redirectedRequest)
     }
 	
@@ -193,13 +202,9 @@ extension DownloadManager: URLSessionDownloadDelegate {
 		do {
 			try FileManager.default.createDirectoryIfNeeded(at: customTempDir)
 			
-			var suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
-            
-            if !suggestedFileName.lowercased().hasSuffix(".ipa") {
-                suggestedFileName += ".ipa"
-            }
-			
-			let destinationURL = customTempDir.appendingPathComponent(suggestedFileName)
+			// 💡 چارەسەرە بنەڕەتییەکە: هەر ناوێکی شێت و درێژی هەبێت فڕێی دەدەین و خۆمان ناوێکی خاوێنی بۆ دادەنێین کە سەد لە سەد کار دەکات
+            let cleanFileName = "\(UUID().uuidString).ipa"
+			let destinationURL = customTempDir.appendingPathComponent(cleanFileName)
 			
 			try FileManager.default.removeFileIfNeeded(at: destinationURL)
 			try FileManager.default.moveItem(at: location, to: destinationURL)
