@@ -30,13 +30,21 @@ class Download: Identifiable, @unchecked Sendable {
 	let fileName: String
 	let onlyArchiving: Bool
     
+    // 💡 ئەم دوو گۆڕاوەمان زیاد کرد بۆ وەرگرتنی ناو و لۆگۆ
+    let appName: String?
+    let appIconURL: URL?
+    
     init(
 		id: String,
 		url: URL,
+        appName: String? = nil,
+        appIconURL: URL? = nil,
 		onlyArchiving: Bool = false
 	) {
 		self.id = id
         self.url = url
+        self.appName = appName
+        self.appIconURL = appIconURL
 		self.onlyArchiving = onlyArchiving
         self.fileName = url.lastPathComponent
     }
@@ -71,14 +79,17 @@ class DownloadManager: NSObject, ObservableObject {
     
     func startDownload(
 		from url: URL,
-		id: String = UUID().uuidString
+		id: String = UUID().uuidString,
+        appName: String? = nil, // 💡 لێرەدا ناوەکە وەردەگرێت
+        appIconURL: URL? = nil  // 💡 لێرەدا لۆگۆکە وەردەگرێت
 	) -> Download {
         if let existingDownload = downloads.first(where: { $0.url == url }) {
             resumeDownload(existingDownload)
             return existingDownload
         }
         
-		let download = Download(id: id, url: url)
+        // 💡 ناو و لۆگۆکە دەدەین بە مۆدێلی داونلۆدەکە
+		let download = Download(id: id, url: url, appName: appName, appIconURL: appIconURL)
         
         let task = _session.downloadTask(with: url)
         download.task = task
@@ -86,7 +97,9 @@ class DownloadManager: NSObject, ObservableObject {
         
         downloads.append(download)
         if #available(iOS 26.0, *) {
-            BackgroundTaskManager.shared.startTask(for: id, filename: url.lastPathComponent)
+            // 💡 ناوە خاوێنەکە دەنێرێت بۆ نۆتیفیکەیشنەکە!
+            let displayName = appName ?? url.lastPathComponent.replacingOccurrences(of: ".ipa", with: "")
+            BackgroundTaskManager.shared.startTask(for: id, filename: displayName)
         } else {
             _updateBackgroundAudioState()
         }
@@ -176,7 +189,6 @@ extension DownloadManager: URLSessionDownloadDelegate {
 		do {
 			try FileManager.default.createDirectoryIfNeeded(at: customTempDir)
 			
-			// Use the server-suggested filename if available, otherwise fallback
 			let suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
 			let destinationURL = customTempDir.appendingPathComponent(suggestedFileName)
 			
