@@ -3,6 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 17.04.2025.
+//  Modified for AshteMobile - Fixed iOS Bundle Caching Bug ⚡️
 //
 
 import Foundation
@@ -14,18 +15,10 @@ final class SigningHandler: NSObject {
 	private let _fileManager = FileManager.default
 	private let _uuid = UUID().uuidString
 	private var _movedAppPath: URL?
-	// using uuid string is the best way to find the
-	// app we want to sign, it does not matter what
-	// type of app it is
 	private var _app: AppInfoPresentable
 	private var _options: Options
 	private let _uniqueWorkDir: URL
-	// the options struct is not gonna decode these so
-	// we're just going to do this. If appicon is not
-	// specified, we're not going to modify the app
-	// icon. If the cert pair is not there, fallback
-	// to adhoc signing (if the option is on, otherwise
-	// throw an error
+
 	var appIcon: UIImage?
 	var appCertificate: CertificatePair?
 	
@@ -100,7 +93,6 @@ final class SigningHandler: NSObject {
 			}
 		}
 		
-		// iOS "26" (19) needs special treatment
 		try await _locateMachosAndFixupArm64eSlice(for: movedAppPath)
 		
 		let handler = ZsignHandler(appUrl: movedAppPath, options: _options, cert: appCertificate)
@@ -111,8 +103,6 @@ final class SigningHandler: NSObject {
 			appCertificate != nil
 		{
 			try await handler.sign()
-//		} else if _options.signingOption == .adhoc {
-//			try await handler.adhocSign()
 		} else if _options.signingOption == .onlyModify {
 			//
 		} else {
@@ -153,13 +143,32 @@ final class SigningHandler: NSObject {
 		
 		await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
 			let bundle = Bundle(url: appUrl)
+            
+            // 💡 چارەسەری یەکجاری بۆ کێشەی هێنانەوەی ناوی بەرنامەی کۆن!
+            // لێرەدا پشت بە Bundle نابەستین چونکە ئایفۆن کاشی دەکات، بەڵکو ڕاستەوخۆ Info.plist دەخوێنینەوە.
+            let infoPlistUrl = appUrl.appendingPathComponent("Info.plist")
+            let infoDict = NSDictionary(contentsOf: infoPlistUrl)
+
+            let finalName = (infoDict?["CFBundleDisplayName"] as? String)
+                         ?? (infoDict?["CFBundleName"] as? String)
+                         ?? _options.appName
+                         ?? bundle?.name
+
+            let finalIdentifier = (infoDict?["CFBundleIdentifier"] as? String)
+                               ?? _options.appIdentifier
+                               ?? bundle?.bundleIdentifier
+
+            let finalVersion = (infoDict?["CFBundleShortVersionString"] as? String)
+                            ?? (infoDict?["CFBundleVersion"] as? String)
+                            ?? _options.appVersion
+                            ?? bundle?.version
 			
 			Storage.shared.addSigned(
 				uuid: _uuid,
 				certificate: _options.signingOption != .default ? nil : appCertificate,
-				appName: bundle?.name,
-				appIdentifier: bundle?.bundleIdentifier,
-				appVersion: bundle?.version,
+				appName: finalName,         // 👈 ناوە ڕاستەقینە نوێیەکە دەداتێ
+				appIdentifier: finalIdentifier,
+				appVersion: finalVersion,
 				appIcon: bundle?.iconFileName
 			) { _ in
 				Logger.signing.info("[\(self._uuid)] Added to database")
@@ -169,7 +178,6 @@ final class SigningHandler: NSObject {
 	}
 	
 	private func _directory() async throws -> URL {
-		// Documents/AshteMobile/Signed/\(UUID)
 		_fileManager.signed(_uuid)
 	}
 	
@@ -194,12 +202,9 @@ extension SigningHandler {
 			infoDictionary.setObject(options.minimumAppRequirement.rawValue, forKey: "MinimumOSVersion" as NSCopying)
 		}
 		
-		// useless crap
 		if infoDictionary["UISupportedDevices"] != nil {
 			infoDictionary.removeObject(forKey: "UISupportedDevices")
 		}
-		
-		// MARK: Prominant values
 		
 		if let customIdentifier = options.appIdentifier {
 			infoDictionary.setObject(customIdentifier, forKey: "CFBundleIdentifier" as NSCopying)
@@ -288,7 +293,6 @@ extension SigningHandler {
 			
 			var didChange = false
 			
-			// CFBundleIdentifier
 			if let oldValue = infoDict["CFBundleIdentifier"] as? String {
 				let newValue = oldValue.replacingOccurrences(of: oldIdentifier, with: newIdentifier)
 				if oldValue != newValue {
@@ -297,7 +301,6 @@ extension SigningHandler {
 				}
 			}
 			
-			// WKCompanionAppBundleIdentifier
 			if let oldValue = infoDict["WKCompanionAppBundleIdentifier"] as? String {
 				let newValue = oldValue.replacingOccurrences(of: oldIdentifier, with: newIdentifier)
 				if oldValue != newValue {
@@ -306,7 +309,6 @@ extension SigningHandler {
 				}
 			}
 			if let extensionDict = (infoDict["NSExtension"] as? NSDictionary)?.mutableCopy() as? NSMutableDictionary {
-				// NSExtension → NSExtensionAttributes → WKAppBundleIdentifier
 				if
 					let attributes = extensionDict["NSExtensionAttributes"] as? NSMutableDictionary,
 					let oldValue = attributes["WKAppBundleIdentifier"] as? String
@@ -318,7 +320,6 @@ extension SigningHandler {
 					}
 				}
                 
-				// NSExtension → NSExtensionFileProviderDocumentGroup
 				if
 					let oldValue = extensionDict["NSExtensionFileProviderDocumentGroup"] as? String
 				{
@@ -340,10 +341,10 @@ extension SigningHandler {
 	
 	private func _removePresetFiles(for app: URL) async throws {
 		var files = [
-			"_CodeSignature", // Fallbaccck for some reason the locate doesnt work
-			"embedded.mobileprovision", // Remove this because zsign doesn't replace it
-			"com.apple.WatchPlaceholder", // Useless
-			"SignedByEsign" // Useless
+			"_CodeSignature", 
+			"embedded.mobileprovision", 
+			"com.apple.WatchPlaceholder", 
+			"SignedByEsign" 
 		].map {
 			app.appendingPathComponent($0)
 		}
@@ -355,7 +356,6 @@ extension SigningHandler {
 		}
 	}
 	
-	// horrible edge-case
 	private func _removeWatchIfNeeded(for app: URL) async throws {
 		let watchDir = app.appendingPathComponent("Watch")
 		guard _fileManager.fileExists(atPath: watchDir.path) else { return }
