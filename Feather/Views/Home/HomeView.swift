@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  100% Clean Pro UI with Download Hijack Bug Fix ⚡️
+//  100% Clean Pro UI with Notification Name Fix ⚡️
 //
 
 import SwiftUI
@@ -275,7 +275,6 @@ struct HomeView: View {
                 .presentationDragIndicator(.visible)
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { notification in
-            // کاتی دەستپێکردنی واژووکردنەکە وەردەگرین بۆ ئەوەی بە دڵنیایی بزانین ئەپەکە نوێیە
             let startTime = notification.object as? Date ?? Date().addingTimeInterval(-5.0)
             
             let now = Date().timeIntervalSince1970
@@ -290,7 +289,6 @@ struct HomeView: View {
     
     @Namespace private var tabAnimation
     
-    // 💡 ئەم فەنکشنە تەنها و تەنها ئەپە تازە واژووکراوەکە دەهێنێت و ڕێگە بە هیچ کۆنێک نادات
     private func presentInstallView(since targetTime: Date, retryCount: Int) {
         Storage.shared.context.refreshAllObjects()
         let request = NSFetchRequest<Signed>(entityName: "Signed")
@@ -299,7 +297,7 @@ struct HomeView: View {
         
         if let latestApp = try? Storage.shared.context.fetch(request).first,
            let appDate = latestApp.value(forKey: "date") as? Date,
-           appDate >= targetTime { // ئەگەر ئەپەکە ڕێک لە کاتی داواکردنەکەدا سەیڤ کرابوو، کەواتە خۆیەتی!
+           appDate >= targetTime { 
             
             _selectedInstallAppPresenting = AnyApp(base: latestApp)
             
@@ -348,7 +346,6 @@ struct HomeView: View {
             let storedCertIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
             let selectedCert = (certs?.indices.contains(storedCertIndex) == true) ? certs![storedCertIndex] : certs?.first
             
-            // کاتەکە تۆمار دەکەین بۆ ئەوەی بزانین بەتەواوی کەی دەستی پێکردووە
             let signStartTime = Date().addingTimeInterval(-2.0)
             
             FR.signPackageFile(
@@ -365,7 +362,6 @@ struct HomeView: View {
                         }
                         
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
-                        // کاتەکە دەنێرین بۆ ئەوەی بزانێت کامەیە تازەترینە
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: signStartTime)
                     } else {
                         print("Signing Error: \(String(describing: error))")
@@ -420,7 +416,6 @@ struct AshteHomeAppCell: View {
     @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var downloadProgress: Double = 0
     @State private var cancellable: AnyCancellable?
-    // 💡 ئەمە ئەو قفڵە گەورەیەیە کە ڕێگری دەکات لە دووبارەبوونەوە و تێکەڵبوونی ئەپەکان
     @State private var hasTriggeredDownloadAction = false
 
     var body: some View {
@@ -487,19 +482,25 @@ struct AshteHomeAppCell: View {
             let isCurrentlyDownloading = downloadManager.getDownload(by: app.stringID) != nil
             if isCurrentlyDownloading {
                 setupObserver()
-                hasTriggeredDownloadAction = false // ئەگەر جارێکی تر دەستی پێکردەوە با قفڵەکە بکرێتەوە
+                hasTriggeredDownloadAction = false 
             } else if downloadProgress >= 0.98 && !hasTriggeredDownloadAction {
-                hasTriggeredDownloadAction = true // 💡 ڕێک لێرەدا قفڵەکە دەدەین بۆ ئەوەی هەرگیز یارییەکە خۆی هەڵنەقورتێنێتەوە!
+                hasTriggeredDownloadAction = true 
                 onDownloadComplete()
             }
         }
     }
     
+    // 💡 ئەوەتە ئێرەمان چاککرد تا ناوەکەی بنێرێت بۆ شاشەکە
     private func triggerDownload() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         if let dlURL = app.downloadURLObject {
-            _ = DownloadManager.shared.startDownload(from: dlURL, id: app.stringID)
+            _ = DownloadManager.shared.startDownload(
+                from: dlURL, 
+                id: app.stringID,
+                appName: app.name,            // 💡 دڵنیابە ئەمە هەیە
+                appIconURL: app.fullImageURL  // 💡 دڵنیابە ئەمە هەیە
+            )
         }
     }
     
@@ -524,7 +525,7 @@ struct AshteHomeAppDetailView: View {
     @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var downloadProgress: Double = 0
     @State private var cancellable: AnyCancellable?
-    @State private var hasTriggeredDownloadAction = false // 💡 قفڵی ئێرەشمان دانا
+    @State private var hasTriggeredDownloadAction = false 
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -654,17 +655,23 @@ struct AshteHomeAppDetailView: View {
                 setupObserver()
                 hasTriggeredDownloadAction = false
             } else if downloadProgress >= 0.98 && !hasTriggeredDownloadAction {
-                hasTriggeredDownloadAction = true // 💡 قفڵەکە بەکاردەخەین
+                hasTriggeredDownloadAction = true 
                 onDownloadComplete()
             }
         }
     }
     
+    // 💡 لێرەشدا چاکمان کرد تا ناوەکەی بنێرێت بۆ شاشەکە
     private func triggerDownload() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         if let dlURL = app.downloadURLObject {
-            _ = DownloadManager.shared.startDownload(from: dlURL, id: app.stringID)
+            _ = DownloadManager.shared.startDownload(
+                from: dlURL, 
+                id: app.stringID,
+                appName: app.name,            // 💡 دڵنیابە ئەمە هەیە
+                appIconURL: app.fullImageURL  // 💡 دڵنیابە ئەمە هەیە
+            )
         }
     }
     
