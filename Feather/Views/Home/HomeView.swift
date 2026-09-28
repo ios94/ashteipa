@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created for AshteMobile
-//  100% Clean Pro UI with Exact App Matcher Fix ⚡️
+//  100% Clean Pro UI with Download Hijack Bug Fix ⚡️
 //
 
 import SwiftUI
@@ -270,36 +270,49 @@ struct HomeView: View {
         }
         .sheet(item: $_selectedInstallAppPresenting) { app in
             InstallPreviewView(app: app.base, isSharing: app.archive)
-                // 💡 ڕێگری لە کاشبوونی پەنجەرەکە دەکەین بۆ ئەوەی هەرگیز تێکەڵ نەبن
                 .id(app.base.identifier ?? UUID().uuidString)
                 .presentationDetents([.height(200)])
                 .presentationDragIndicator(.visible)
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { notification in
-            // 💡 لێرەدا ناوەکەی پێدەگات کە لە SigningView وە بۆی هاتووە
-            let targetAppName = notification.object as? String ?? ""
+            // کاتی دەستپێکردنی واژووکردنەکە وەردەگرین بۆ ئەوەی بە دڵنیایی بزانین ئەپەکە نوێیە
+            let startTime = notification.object as? Date ?? Date().addingTimeInterval(-5.0)
             
-            // کەمێک کات دەدەین تا داتابەیس ئەپەکە سەیڤ دەکات
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                let request = NSFetchRequest<Signed>(entityName: "Signed")
-                request.sortDescriptors = [NSSortDescriptor(keyPath: \Signed.date, ascending: false)]
-                request.fetchLimit = 20
-                
-                if let signedApps = try? Storage.shared.context.fetch(request) {
-                    // 💡 ڕێک دەگەڕێین بەدوای ئەو ئەپەی کە ناوەکەی لەگەڵ ئەوەی ئێستا واژوو کراوە یەک دەگرێتەوە
-                    if let exactApp = signedApps.first(where: { 
-                        let dbName = ($0.value(forKey: "name") as? String) ?? ""
-                        return dbName == targetAppName 
-                    }) ?? signedApps.first {
-                        
-                        _selectedInstallAppPresenting = AnyApp(base: exactApp)
-                    }
-                }
+            let now = Date().timeIntervalSince1970
+            let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
+            
+            if now - lastTime > 2.0 {
+                UserDefaults.standard.set(now, forKey: "AshteMobile.GlobalInstallLock")
+                presentInstallView(since: startTime, retryCount: 0)
             }
         }
     }
     
     @Namespace private var tabAnimation
+    
+    // 💡 ئەم فەنکشنە تەنها و تەنها ئەپە تازە واژووکراوەکە دەهێنێت و ڕێگە بە هیچ کۆنێک نادات
+    private func presentInstallView(since targetTime: Date, retryCount: Int) {
+        Storage.shared.context.refreshAllObjects()
+        let request = NSFetchRequest<Signed>(entityName: "Signed")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Signed.date, ascending: false)]
+        request.fetchLimit = 1
+        
+        if let latestApp = try? Storage.shared.context.fetch(request).first,
+           let appDate = latestApp.value(forKey: "date") as? Date,
+           appDate >= targetTime { // ئەگەر ئەپەکە ڕێک لە کاتی داواکردنەکەدا سەیڤ کرابوو، کەواتە خۆیەتی!
+            
+            _selectedInstallAppPresenting = AnyApp(base: latestApp)
+            
+        } else if retryCount < 15 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                presentInstallView(since: targetTime, retryCount: retryCount + 1)
+            }
+        } else {
+            if let fallback = try? Storage.shared.context.fetch(request).first {
+                 _selectedInstallAppPresenting = AnyApp(base: fallback)
+            }
+        }
+    }
     
     private func handleAutoSign(for app: AshteHomeAppModel) {
         if HomeGlobalLock.isSigningActive { return }
@@ -313,10 +326,17 @@ struct HomeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let request = NSFetchRequest<Imported>(entityName: "Imported")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Imported.date, ascending: false)]
-            request.fetchLimit = 1 
+            request.fetchLimit = 10 
             
-            guard let importedApps = try? Storage.shared.context.fetch(request),
-                  let importedApp = importedApps.first else {
+            guard let importedApps = try? Storage.shared.context.fetch(request) else {
+                HomeGlobalLock.isSigningActive = false
+                return
+            }
+            
+            guard let importedApp = importedApps.first(where: { 
+                let name = ($0.value(forKey: "name") as? String) ?? ""
+                return name.localizedCaseInsensitiveContains(app.name) || app.name.localizedCaseInsensitiveContains(name) 
+            }) ?? importedApps.first else {
                 HomeGlobalLock.isSigningActive = false
                 return
             }
@@ -327,6 +347,9 @@ struct HomeView: View {
             let certs = try? Storage.shared.context.fetch(certRequest)
             let storedCertIndex = UserDefaults.standard.integer(forKey: "ashtemobile.selectedCert")
             let selectedCert = (certs?.indices.contains(storedCertIndex) == true) ? certs![storedCertIndex] : certs?.first
+            
+            // کاتەکە تۆمار دەکەین بۆ ئەوەی بزانین بەتەواوی کەی دەستی پێکردووە
+            let signStartTime = Date().addingTimeInterval(-2.0)
             
             FR.signPackageFile(
                 importedApp,
@@ -341,10 +364,9 @@ struct HomeView: View {
                             Storage.shared.deleteApp(for: importedApp)
                         }
                         
-                        let signedName = (importedApp.value(forKey: "name") as? String) ?? app.name
                         NotificationCenter.default.post(name: Notification.Name("AshteMobile.ShowSignSuccess"), object: app.name)
-                        // 💡 ناوەکە دەنێرین بۆ ئەوەی بزانێت کامەیە
-                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: signedName)
+                        // کاتەکە دەنێرین بۆ ئەوەی بزانێت کامەیە تازەترینە
+                        NotificationCenter.default.post(name: Notification.Name("AshteMobile.installApp"), object: signStartTime)
                     } else {
                         print("Signing Error: \(String(describing: error))")
                     }
@@ -398,6 +420,8 @@ struct AshteHomeAppCell: View {
     @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var downloadProgress: Double = 0
     @State private var cancellable: AnyCancellable?
+    // 💡 ئەمە ئەو قفڵە گەورەیەیە کە ڕێگری دەکات لە دووبارەبوونەوە و تێکەڵبوونی ئەپەکان
+    @State private var hasTriggeredDownloadAction = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -463,7 +487,9 @@ struct AshteHomeAppCell: View {
             let isCurrentlyDownloading = downloadManager.getDownload(by: app.stringID) != nil
             if isCurrentlyDownloading {
                 setupObserver()
-            } else if downloadProgress >= 0.98 {
+                hasTriggeredDownloadAction = false // ئەگەر جارێکی تر دەستی پێکردەوە با قفڵەکە بکرێتەوە
+            } else if downloadProgress >= 0.98 && !hasTriggeredDownloadAction {
+                hasTriggeredDownloadAction = true // 💡 ڕێک لێرەدا قفڵەکە دەدەین بۆ ئەوەی هەرگیز یارییەکە خۆی هەڵنەقورتێنێتەوە!
                 onDownloadComplete()
             }
         }
@@ -498,6 +524,7 @@ struct AshteHomeAppDetailView: View {
     @ObservedObject private var downloadManager = DownloadManager.shared
     @State private var downloadProgress: Double = 0
     @State private var cancellable: AnyCancellable?
+    @State private var hasTriggeredDownloadAction = false // 💡 قفڵی ئێرەشمان دانا
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -625,7 +652,9 @@ struct AshteHomeAppDetailView: View {
             let isCurrentlyDownloading = downloadManager.getDownload(by: app.stringID) != nil
             if isCurrentlyDownloading {
                 setupObserver()
-            } else if downloadProgress >= 0.98 {
+                hasTriggeredDownloadAction = false
+            } else if downloadProgress >= 0.98 && !hasTriggeredDownloadAction {
+                hasTriggeredDownloadAction = true // 💡 قفڵەکە بەکاردەخەین
                 onDownloadComplete()
             }
         }
