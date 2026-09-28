@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 3.05.2025.
-//  Modified for AshteMobile - Force .ipa extension for non-direct links ⚡️
+//  Modified for AshteMobile - Force .ipa + Safari User-Agent + Redirect Fix ⚡️
 //
 
 import Foundation
@@ -81,7 +81,11 @@ class DownloadManager: NSObject, ObservableObject {
         
 		let download = Download(id: id, url: url)
         
-        let task = _session.downloadTask(with: url)
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
+        
+        let task = _session.downloadTask(with: request)
         download.task = task
         task.resume()
         
@@ -111,7 +115,11 @@ class DownloadManager: NSObject, ObservableObject {
             task.resume()
             _updateBackgroundAudioState()
         } else if let url = download.task?.originalRequest?.url {
-            let task = _session.downloadTask(with: url)
+            var request = URLRequest(url: url)
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            request.setValue("*/*", forHTTPHeaderField: "Accept")
+            
+            let task = _session.downloadTask(with: request)
             download.task = task
             task.resume()
             _updateBackgroundAudioState()
@@ -148,6 +156,14 @@ class DownloadManager: NSObject, ObservableObject {
 }
 
 extension DownloadManager: URLSessionDownloadDelegate {
+    
+    // 💡 چارەسەرە گەورەکە لێرەدایە: کاتێک وێبسایتەکە باز دەدات (Redirect) بۆ لینکی دووەم، ماسکەکەی سەفاری دەپارێزین!
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        var redirectedRequest = request
+        redirectedRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        redirectedRequest.setValue("*/*", forHTTPHeaderField: "Accept")
+        completionHandler(redirectedRequest)
+    }
 	
 	func handlePachageFile(url: URL, dl: Download) throws {
 		FR.handlePackageFile(url, download: dl) { err in
@@ -177,10 +193,8 @@ extension DownloadManager: URLSessionDownloadDelegate {
 		do {
 			try FileManager.default.createDirectoryIfNeeded(at: customTempDir)
 			
-			// Use the server-suggested filename if available, otherwise fallback
 			var suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
             
-            // 💡 چارەسەرە نایابەکە: بە زۆر پاشگری .ipa دەخەینە پاڵ هەر فایلێک کە دایدەگرێت ئەگەر پێوەی نەبێت!
             if !suggestedFileName.lowercased().hasSuffix(".ipa") {
                 suggestedFileName += ".ipa"
             }
