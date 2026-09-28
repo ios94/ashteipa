@@ -65,8 +65,13 @@ struct DownloadButtonView: View {
 			} else {
 				Button {
 					if let url = app.currentDownloadUrl {
-                        // 💡 لابردنی autoSign: true بۆ ئەوەی ئیرۆری Error 65 نەدات
-						_ = downloadManager.startDownload(from: url, id: app.currentUniqueId)
+                        // 💡 لێرەدا کێشەکەمان بەتەواوی بنبڕ کرد! ناو و لۆگۆکە دەنێرین
+						_ = downloadManager.startDownload(
+                            from: url, 
+                            id: app.currentUniqueId,
+                            appName: app.name,           // 💡 ناوی یارییەکە
+                            appIconURL: app.iconURL      // 💡 لۆگۆی یارییەکە
+                        )
 					}
 				} label: {
 					Text(.localized("Get")) 
