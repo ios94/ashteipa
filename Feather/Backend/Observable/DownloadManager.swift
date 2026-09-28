@@ -3,6 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 3.05.2025.
+//  Modified for AshteMobile - Force .ipa extension for non-direct links ⚡️
 //
 
 import Foundation
@@ -177,7 +178,13 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			try FileManager.default.createDirectoryIfNeeded(at: customTempDir)
 			
 			// Use the server-suggested filename if available, otherwise fallback
-			let suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
+			var suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
+            
+            // 💡 چارەسەرە نایابەکە: بە زۆر پاشگری .ipa دەخەینە پاڵ هەر فایلێک کە دایدەگرێت ئەگەر پێوەی نەبێت!
+            if !suggestedFileName.lowercased().hasSuffix(".ipa") {
+                suggestedFileName += ".ipa"
+            }
+			
 			let destinationURL = customTempDir.appendingPathComponent(suggestedFileName)
 			
 			try FileManager.default.removeFileIfNeeded(at: destinationURL)
