@@ -30,7 +30,7 @@ class Download: Identifiable, @unchecked Sendable {
 	let fileName: String
 	let onlyArchiving: Bool
     
-    // 💡 ئەم دوو گۆڕاوەمان زیاد کرد بۆ وەرگرتنی ناو و لۆگۆ
+    // 💡 گۆڕاوەکانی ناو و لۆگۆ
     let appName: String?
     let appIconURL: URL?
     
@@ -46,7 +46,18 @@ class Download: Identifiable, @unchecked Sendable {
         self.appName = appName
         self.appIconURL = appIconURL
 		self.onlyArchiving = onlyArchiving
-        self.fileName = url.lastPathComponent
+        
+        // 💡 چارەسەرە گەورەکە لێرەدایە!
+        if let realName = appName {
+            self.fileName = realName
+        } else {
+            // ئەگەر ناوی نەبوو، لینکەکە پاک دەکاتەوە
+            var cleanName = url.lastPathComponent
+            if let queryIndex = cleanName.firstIndex(of: "?") {
+                cleanName = String(cleanName[..<queryIndex])
+            }
+            self.fileName = cleanName.replacingOccurrences(of: ".ipa", with: "")
+        }
     }
 }
 
@@ -80,15 +91,14 @@ class DownloadManager: NSObject, ObservableObject {
     func startDownload(
 		from url: URL,
 		id: String = UUID().uuidString,
-        appName: String? = nil, // 💡 لێرەدا ناوەکە وەردەگرێت
-        appIconURL: URL? = nil  // 💡 لێرەدا لۆگۆکە وەردەگرێت
+        appName: String? = nil,
+        appIconURL: URL? = nil
 	) -> Download {
         if let existingDownload = downloads.first(where: { $0.url == url }) {
             resumeDownload(existingDownload)
             return existingDownload
         }
         
-        // 💡 ناو و لۆگۆکە دەدەین بە مۆدێلی داونلۆدەکە
 		let download = Download(id: id, url: url, appName: appName, appIconURL: appIconURL)
         
         let task = _session.downloadTask(with: url)
@@ -97,9 +107,7 @@ class DownloadManager: NSObject, ObservableObject {
         
         downloads.append(download)
         if #available(iOS 26.0, *) {
-            // 💡 ناوە خاوێنەکە دەنێرێت بۆ نۆتیفیکەیشنەکە!
-            let displayName = appName ?? url.lastPathComponent.replacingOccurrences(of: ".ipa", with: "")
-            BackgroundTaskManager.shared.startTask(for: id, filename: displayName)
+            BackgroundTaskManager.shared.startTask(for: id, filename: download.fileName)
         } else {
             _updateBackgroundAudioState()
         }
