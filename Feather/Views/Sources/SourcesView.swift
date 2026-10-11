@@ -6,20 +6,17 @@ import NimbleViews
 // MARK: - View
 struct SourcesView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    // 💡 هێنانی داتابەیسەکە بۆ خەزنکردنی سۆرسەکە
-    @Environment(\.managedObjectContext) private var context
-    
     #if !NIGHTLY && !DEBUG
     @AppStorage("AshteMobile.shouldStar") private var _shouldStar: Int = 0
     #endif
-    
     @StateObject var viewModel = SourcesViewModel.shared
     @State private var _isAddingPresenting = false
     @State private var _addingSourceLoading = false
-    
-    // گۆڕاوەکان بۆ سێرچ و تابەکان
     @State private var _searchText = ""
-    @State private var _selectedCategory = "All"
+    
+    private var _filteredSources: [AltSource] {
+        _sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
+    }
     
     @FetchRequest(
         entity: AltSource.entity(),
@@ -29,33 +26,78 @@ struct SourcesView: View {
     
     // MARK: Body
     var body: some View {
-        NBNavigationView(.localized("Ashtemobile")) {
-            VStack(spacing: 0) {
-                // تابەکانی (All, Games, Apps)
-                Picker("Categories", selection: $_selectedCategory) {
-                    Text("All").tag("All")
-                    Text("Games").tag("Games")
-                    Text("Apps").tag("Apps")
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                
-                if _sources.isEmpty {
-                    _emptyStateView()
-                } else {
-                    // نیشاندانی ڕاستەوخۆی ئەپەکان
-                    SourceAppsView(object: Array(_sources), viewModel: viewModel)
+        NBNavigationView(.localized("Sources")) {
+            List {
+                if !_filteredSources.isEmpty {
+                    // MARK: - Featured Header Card
+                    Section {
+                        NavigationLink {
+                            SourceAppsView(object: Array(_sources), viewModel: viewModel)
+                        } label: {
+                            HStack(spacing: 16) {
+                                // ئایکۆنێکی مۆدێرن بە باکگراوندێکی gradient
+                                ZStack {
+                                    LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                        .frame(width: 56, height: 56)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    
+                                    Image(systemName: "square.grid.3x3.fill")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(.localized("All Repositories"))
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    
+                                    Text(.localized("Explore all apps from every source"))
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.5))
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
+                    .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+                    
+                    // MARK: - Repositories List
+                    NBSection(
+                        .localized("Repositories"),
+                        secondary: _filteredSources.count.description
+                    ) {
+                        ForEach(_filteredSources) { source in
+                            NavigationLink {
+                                SourceAppsView(object: [source], viewModel: viewModel)
+                            } label: {
+                                SourcesCellView(source: source)
+                                    .padding(.vertical, 4)
+                            }
+                        }
+                    }
                 }
             }
-            .searchable(text: $_searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search apps...")
+            .listStyle(.insetGrouped)
+            .searchable(text: $_searchText, placement: .platform())
+            .overlay {
+                if _filteredSources.isEmpty {
+                    _emptyStateView()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         _isAddingPresenting = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
                             .symbolRenderingMode(.hierarchical)
                     }
                     .disabled(_addingSourceLoading)
@@ -71,7 +113,6 @@ struct SourcesView: View {
             }
         }
         .task(id: Array(_sources)) {
-            _addDefaultSource() // 💡 زیادکردنی سۆرسەکە پێش هێنانەوەی داتاکان
             await viewModel.fetchSources(_sources)
         }
         #if !NIGHTLY && !DEBUG
@@ -85,45 +126,20 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
-    // 💡 فەنکشن بۆ دابەزاندنی سۆرسەکەی خۆت لەڕێگەی CoreData
-    private func _addDefaultSource() {
-        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
-        
-        // پشکنین دەکات بزانێت ئایا سۆرسەکە پێشتر زیاد کراوە یان نا
-        let containsDefault = _sources.contains { source in
-            source.sourceURL?.absoluteString == defaultURLString
-        }
-        
-        if !containsDefault {
-            guard let url = URL(string: defaultURLString) else { return }
-            
-            // زیادکردنی سۆرسەکە بۆ ناو داتابەیسی ئەپەکە (CoreData)
-            let newSource = AltSource(context: context)
-            newSource.name = "Ashtemobile"
-            newSource.sourceURL = url
-            
-            do {
-                try context.save() // سەیڤکردنی سۆرسەکە
-            } catch {
-                print("Error saving default source: \(error.localizedDescription)")
-            }
-        }
-    }
-    
     @ViewBuilder
     private func _emptyStateView() -> some View {
         if #available(iOS 17, *) {
             ContentUnavailableView {
-                Label(.localized("Loading..."), systemImage: "arrow.down.circle.fill")
+                Label(.localized("No Repositories"), systemImage: "globe.asia.australia.fill")
                     .symbolRenderingMode(.hierarchical)
                     .foregroundColor(.blue)
             } description: {
-                Text(.localized("Fetching Ashtemobile Apps."))
+                Text(.localized("Stay updated by adding your favorite app repositories here."))
             } actions: {
-                Button(action: { _addDefaultSource() }) {
+                Button(action: { _isAddingPresenting = true }) {
                     HStack {
-                        Image(systemName: "arrow.clockwise")
-                        Text(.localized("Load Apps Manually"))
+                        Image(systemName: "plus")
+                        Text(.localized("Add First Source"))
                     }
                     .fontWeight(.bold)
                     .padding(.horizontal, 24)
