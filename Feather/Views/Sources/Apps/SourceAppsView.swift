@@ -39,7 +39,7 @@ struct SourceAppsView: View {
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
     
-    // 💡 گۆڕاوی نوێ بۆ تابەکان (All, Games, Apps)
+    // 💡 گۆڕاوی تابەکان (All, Games, Apps)
     @State private var _selectedCategory = "All"
 
 	private var _navigationTitle: String {
@@ -57,7 +57,7 @@ struct SourceAppsView: View {
 	// MARK: Body
 	var body: some View {
 		VStack(spacing: 0) {
-            // 💡 دانانی تابەکان لە ژێر بۆشایی سێرچەکەدا
+            // 💡 تابەکانی (All, Games, Apps) ڕێک لە ژێر سێرچەکە
             Picker("Categories", selection: $_selectedCategory) {
                 Text("All").tag("All")
                 Text("Games").tag("Games")
@@ -66,15 +66,13 @@ struct SourceAppsView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.bottom, 8)
-            .padding(.top, 8)
+            .padding(.top, 4)
             
 			ZStack {
 				if
 					let _sources,
 					!_sources.isEmpty
 				{
-                    // تێبینی: بۆ ئەوەی فلتەرەکە بەتەواوی کار بکات، دەبێت ئەم _selectedCategory
-                    // بنێردرێتە ناو SourceAppsTableRepresentableView لە داهاتوودا.
 					SourceAppsTableRepresentableView(
 						sources: _sources,
 						searchText: $_searchText,
@@ -89,7 +87,7 @@ struct SourceAppsView: View {
 			}
 		}
 		.navigationTitle(_navigationTitle)
-		.searchable(text: $_searchText, placement: .platform())
+		.searchable(text: $_searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
 		.toolbarTitleMenu {
 			if
 				let _sources,
@@ -178,8 +176,6 @@ extension SourceAppsView {
 		}
 	}
 }
-
-import SwiftUI
 
 extension View {
 	@ViewBuilder
