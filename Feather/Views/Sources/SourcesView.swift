@@ -12,11 +12,6 @@ struct SourcesView: View {
     @StateObject var viewModel = SourcesViewModel.shared
     @State private var _isAddingPresenting = false
     @State private var _addingSourceLoading = false
-    @State private var _searchText = ""
-    
-    private var _filteredSources: [AltSource] {
-        _sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
-    }
     
     @FetchRequest(
         entity: AltSource.entity(),
@@ -26,79 +21,25 @@ struct SourcesView: View {
     
     // MARK: Body
     var body: some View {
-        NBNavigationView(.localized("Sources")) {
-            List {
-                if !_filteredSources.isEmpty {
-                    // MARK: - Featured Header Card
-                    Section {
-                        NavigationLink {
-                            SourceAppsView(object: Array(_sources), viewModel: viewModel)
-                        } label: {
-                            HStack(spacing: 16) {
-                                // ئایکۆنێکی مۆدێرن بە باکگراوندێکی gradient
-                                ZStack {
-                                    LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                        .frame(width: 56, height: 56)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                    
-                                    Image(systemName: "square.grid.3x3.fill")
-                                        .font(.system(size: 24, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(.localized("All Repositories"))
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(.localized("Explore all apps from every source"))
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
-                    
-                    // MARK: - Repositories List
-                    NBSection(
-                        .localized("Repositories"),
-                        secondary: _filteredSources.count.description
-                    ) {
-                        ForEach(_filteredSources) { source in
-                            NavigationLink {
-                                SourceAppsView(object: [source], viewModel: viewModel)
-                            } label: {
-                                SourcesCellView(source: source)
-                                    .padding(.vertical, 4)
-                            }
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .searchable(text: $_searchText, placement: .platform())
-            .overlay {
-                if _filteredSources.isEmpty {
+        NBNavigationView(.localized("Ashtemobile")) {
+            Group {
+                if _sources.isEmpty {
                     _emptyStateView()
+                } else {
+                    // 💡 ڕاستەوخۆ شاشەی ئەپەکان نیشان دەدات لەبری لیستی سۆرسەکان
+                    SourceAppsView(object: Array(_sources), viewModel: viewModel)
                 }
             }
             .toolbar {
+                // 💡 دوگمەی زیادکردنی سۆرس (+) خرایە سەرەوەی شاشەکە بە شێوەیەکی جوان
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         _isAddingPresenting = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 22, weight: .bold))
                             .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(.blue)
                     }
                     .disabled(_addingSourceLoading)
                 }
