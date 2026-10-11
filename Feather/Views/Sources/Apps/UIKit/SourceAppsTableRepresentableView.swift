@@ -138,19 +138,17 @@ extension SourceAppsTableRepresentableView {
         
         private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
             let filtered = _allAppsWithSource.filter { appTuple in
-                // 1. پشکنینی سێرچ
                 let matchesSearch = searchText.isEmpty ||
                 (appTuple.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
                 
-                // 2. پشکنینی کاتیگۆری بەپێی جۆری ڕاستەقینەی ناو JSON (type / category)
                 var matchesCategory = true
                 if selectedCategory != "All" {
-                    // بەکارهێنانی type بۆ جیاکردنەوەی پاک و بێگەردی ئەپ و یارییەکان
-                    let appType = appTuple.app.type?.lowercased() ?? ""
-                    let isGame = appType == "games" || appType == "game"
+                    // بەکارهێنانی category بەپێی فایلی JSONەکەت
+                    let categoryString = appTuple.app.category?.lowercased() ?? ""
+                    let isGame = categoryString.contains("game")
                     
                     if selectedCategory == "Games" {
                         matchesCategory = isGame
@@ -193,8 +191,9 @@ extension SourceAppsTableRepresentableView {
                     let comparison = n1.localizedCaseInsensitiveCompare(n2) == .orderedAscending
                     return sortAscending ? comparison : !comparison
                 }
-                _groupedAppsByNameFirstLetter = Dictionary(grouping: sorted) { appTuple -> String in
-                    let first = appTuple.app.name?.trimmingCharacters(in: .whitespacesAndNewlines).first?.uppercased() ?? "#"
+                // دیاریکردنی جۆری دروست بۆ ڕێگریکردن لە هەڵەی Ambiguous Type
+                _groupedAppsByNameFirstLetter = Dictionary(grouping: sorted) { (entry: (source: ASRepository, app: ASRepository.App)) -> String in
+                    let first = entry.app.name?.trimmingCharacters(in: .whitespacesAndNewlines).first?.uppercased() ?? "#"
                     return first.range(of: "[A-Z]", options: .regularExpression) != nil ? first : "#"
                 }
                 _sortedSectionTitles = _groupedAppsByNameFirstLetter.keys.sorted(by: {
