@@ -133,8 +133,11 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!-- 💡 ئەم دوو دێڕە گۆڕدران بۆ false بۆ شاردنەوەی فۆڵدەرەکە -->
 	<key>UIFileSharingEnabled</key>
-	<true/>
+	<false/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
 	<key>UILaunchScreen</key>
 	<false/>
 	<key>UTExportedTypeDeclarations</key>
