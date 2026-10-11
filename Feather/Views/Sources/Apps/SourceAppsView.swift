@@ -53,23 +53,21 @@ struct SourceAppsView: View {
 	
 	// MARK: Body
 	var body: some View {
-		VStack(spacing: 0) {
-			ZStack {
-				if
-					let _sources,
-					!_sources.isEmpty
-				{
-					SourceAppsTableRepresentableView(
-						sources: _sources,
-						searchText: $_searchText,
-						sortOption: $_sortOption,
-						sortAscending: $_sortAscending,
-						onSelect: {self._selectedRoute = $0}
-					)
-					.ignoresSafeArea()
-				} else {
-					ProgressView()
-				}
+		ZStack {
+			if
+				let _sources,
+				!_sources.isEmpty
+			{
+				SourceAppsTableRepresentableView(
+					sources: _sources,
+					searchText: $_searchText,
+					sortOption: $_sortOption,
+					sortAscending: $_sortAscending,
+					onSelect: {self._selectedRoute = $0}
+				)
+				.ignoresSafeArea()
+			} else {
+				ProgressView()
 			}
 		}
 		.navigationTitle(_navigationTitle)
@@ -85,6 +83,7 @@ struct SourceAppsView: View {
 					}
 				}
 			}
+            // لێرەدا دوگمەی Copy و Patreon بە تەواوی سڕانەوە
 		}
 		.toolbar {
 			NBToolbarMenu(
