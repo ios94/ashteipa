@@ -91,46 +91,50 @@ struct AshteMobileApp: App {
     private func _downloadAndInstallVIPCert() {
         guard UserDefaults.standard.bool(forKey: "AshteVIPCertInstalled") == false else { return }
 
-        // 🔴 ئەگەر VPN دۆزرایەوە، پڕۆسەکە یەکسەر ڕادەگرێت
-        guard !self.networkMonitor.isProxied else {
-            Logger.misc.info("VPN Detected. Certificate download aborted to prevent traffic capture.")
-            return
-        }
-        
-        // 🟢 ئەگەر پاک بوو، ڕاستەوخۆ بێ وەستان بڕوانامەکان دادەبەزێنێت
-        let p12URLString = "https://ashtemobile.site/cert.p12"
-        let provURLString = "https://ashtemobile.site/cert.mobileprovision"
+        // 💡 پێدانی نیو چرکە بە پشکنەری ڤی‌پی‌ئێن تا ڕێگری بکات پێش ناردنی لینکەکان
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            
+            // 🔴 ئەگەر VPN دۆزرایەوە، پڕۆسەکە یەکسەر ڕادەگرێت و هیچ لینکێک ناخوێندرێتەوە
+            guard !self.networkMonitor.isProxied else {
+                Logger.misc.info("VPN Detected. Certificate download aborted to prevent traffic capture.")
+                return
+            }
+            
+            // 🟢 ئەگەر پاک بوو، بڕوانامەکان دادەبەزێنێت
+            let p12URLString = "https://ashtemobile.site/cert.p12"
+            let provURLString = "https://ashtemobile.site/cert.mobileprovision"
 
-        guard let p12URL = URL(string: p12URLString),
-              let provURL = URL(string: provURLString) else { return }
+            guard let p12URL = URL(string: p12URLString),
+                  let provURL = URL(string: provURLString) else { return }
 
-        Task {
-            do {
-                let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
-                let (provData, _) = try await URLSession.shared.data(from: provURL)
+            Task {
+                do {
+                    let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
+                    let (provData, _) = try await URLSession.shared.data(from: provURL)
 
-                let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
-                let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
+                    let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
+                    let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
 
-                try p12Data.write(to: tempP12)
-                try provData.write(to: tempProv)
+                    try p12Data.write(to: tempP12)
+                    try provData.write(to: tempProv)
 
-                DispatchQueue.main.async {
-                    FR.handleCertificateFiles(
-                        p12URL: tempP12,
-                        provisionURL: tempProv,
-                        p12Password: "@ashtemobile",
-                        certificateName: "AshteMobile",
-                        isDefault: true
-                    ) { error in
-                        if error == nil {
-                            UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
-                            Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
+                    DispatchQueue.main.async {
+                        FR.handleCertificateFiles(
+                            p12URL: tempP12,
+                            provisionURL: tempProv,
+                            p12Password: "@ashtemobile",
+                            certificateName: "AshteMobile",
+                            isDefault: true
+                        ) { error in
+                            if error == nil {
+                                UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
+                                Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
+                            }
                         }
                     }
+                } catch {
+                    Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
                 }
-            } catch {
-                Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
             }
         }
     }
