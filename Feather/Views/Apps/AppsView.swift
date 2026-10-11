@@ -20,7 +20,6 @@ struct AppsView: View {
     @State private var _selectedCategory = "All"
     @State private var _selectedRoute: SourceAppsView.SourceAppRoute?
     
-    // تابی Apps تەنها پشت بە لینکی گیتھەب دەبەستێت بێ تێکەڵبوون لەگەڵ Sources
     @FetchRequest(
         entity: AltSource.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
