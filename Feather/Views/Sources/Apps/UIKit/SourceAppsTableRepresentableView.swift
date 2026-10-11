@@ -14,10 +14,6 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	@Binding var searchText: String
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
-    
-    // 💡 گۆڕاوی نوێ بۆ وەرگرتنی کاتیگۆری دیاریکراو (All, Games, Apps)
-    @Binding var selectedCategory: String
-    
 	var onSelect: (SourceAppsView.SourceAppRoute) -> Void
 	
 	func makeUIView(context: Context) -> UITableView {
@@ -67,15 +63,13 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 		let searchChanged = context.coordinator.searchText != searchText
 		let sortOptionChanged = context.coordinator.sortOption != sortOption
 		let sortDirectionChanged = context.coordinator.sortAscending != sortAscending
-        let categoryChanged = context.coordinator.selectedCategory != selectedCategory // 💡 پشکنینی گۆڕانی تابەکە
 		
 		context.coordinator.sources = sources
 		context.coordinator.searchText = searchText
 		context.coordinator.sortOption = sortOption
 		context.coordinator.sortAscending = sortAscending
-        context.coordinator.selectedCategory = selectedCategory // 💡 نوێکردنەوەی کاتیگۆرییەکە لەناو کۆردینەیتەر
 		
-		if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged || categoryChanged {
+		if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged {
 			context.coordinator.invalidateCache()
 		}
 	}
@@ -86,7 +80,6 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 			searchText: searchText,
 			sortOption: sortOption,
 			sortAscending: sortAscending,
-            selectedCategory: selectedCategory, // 💡 ناردنی کاتیگۆری بۆ کۆردینەیتەر
 			onSelect: onSelect
 		)
 	}
@@ -98,7 +91,6 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	var searchText: String
 	var sortOption: SourceAppsView.SortOption
 	var sortAscending: Bool
-    var selectedCategory: String // 💡 گۆڕاوی کاتیگۆری لەناو کۆردینەیتەر
 	let onSelect: (SourceAppsView.SourceAppRoute) -> Void
 	
 	private var _groupedAppsByNameFirstLetter: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
@@ -125,14 +117,12 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		searchText: String,
 		sortOption: SourceAppsView.SortOption,
 		sortAscending: Bool,
-        selectedCategory: String, // 💡
 		onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
 	) {
 		self.sources = sources
 		self.searchText = searchText
 		self.sortOption = sortOption
 		self.sortAscending = sortAscending
-        self.selectedCategory = selectedCategory // 💡
 		self.onSelect = onSelect
 		super.init()
 		
@@ -142,16 +132,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	}
 	
 	private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
-        // 💡 سەرەتا ئەپەکان فلتەر دەکەین بەپێی تابەکە (All, Games, Apps)
-        let categoryFiltered = _allAppsWithSource.filter { item in
-            if selectedCategory == "All" { return true }
-            // پشکنین دەکات بزانێت categoryی ناو jsonەکە هاوتایە لەگەڵ تابەکە
-            let appCategory = item.app.category?.lowercased() ?? ""
-            return appCategory == selectedCategory.lowercased()
-        }
-        
-        // پاشان فلتەری سێرچەکە جێبەجێ دەکەین لەسەر ئەوانەی ماونەتەوە
-		let filtered = categoryFiltered.filter {
+		let filtered = _allAppsWithSource.filter {
 			searchText.isEmpty ||
 			($0.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
 			($0.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
