@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  Safe Onboarding Integrated & VPN Detection Added ⚡️
+//  Safe Onboarding Integrated & Strict VPN Detection ⚡️
 //
 
 import SwiftUI
@@ -20,13 +20,13 @@ struct AshteMobileApp: App {
     @StateObject var downloadManager = DownloadManager.shared
     let storage = Storage.shared
     
-    // 💡 ١. دروستکردنی چاودێری ڤی‌پی‌ئێن بۆ ئەوەی هەر کە ئەپەکە کرایەوە کاری خۆی بکات
+    // 💡 ١. دروستکردنی چاودێری ڤی‌پی‌ئێن
     @StateObject private var networkMonitor = NetworkMonitor()
     
     // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     
-    // دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
+    // دروستکردنی بایندینگی سەلامەت
     private var showOnboardingBinding: Binding<Bool> {
         Binding<Bool>(
             get: { !hasCompletedOnboarding },
@@ -39,10 +39,10 @@ struct AshteMobileApp: App {
             // 💡 ٢. مەرجەکە بۆ زانینی ئەوەی ئایا ڤی‌پی‌ئێن پێیە یان نا
             Group {
                 if networkMonitor.isProxied {
-                    // 🔴 ئەگەر ڤی‌پی‌ئێن کارا بوو، ئەم شاشەیە دەکرێتەوە و ڕێگری دەکات
+                    // 🔴 ئەگەر ڤی‌پی‌ئێن کارا بوو، شاشە سوورەکە نیشان بدە
                     ProxyDetectionView(monitor: networkMonitor)
                 } else {
-                    // 🟢 ئەگەر ڤی‌پی‌ئێن نەبوو، ئەپەکەی خۆت ئاسایی کار دەکات
+                    // 🟢 ئەگەر ڤی‌پی‌ئێن نەبوو، ئەپەکەی خۆت کار دەکات
                     VStack {
                         DownloadHeaderView(downloadManager: downloadManager)
                             .transition(.move(edge: .top).combined(with: .opacity))
@@ -53,7 +53,6 @@ struct AshteMobileApp: App {
                     }
                     .animation(.smooth, value: downloadManager.manualDownloads.description)
                     
-                    // بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
                     .fullScreenCover(isPresented: showOnboardingBinding) {
                         Group {
                             if #available(iOS 17.0, *) {
@@ -74,7 +73,6 @@ struct AshteMobileApp: App {
                     }
                 }
             }
-            // 💡 ٣. کاتێک بەکارهێنەر لە ئەپێکی ترەوە (وەک سێتینگ) دەگەڕێتەوە، دووبارە پشکنین دەکات
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 networkMonitor.checkProxyAndVPN()
             }
@@ -93,39 +91,50 @@ struct AshteMobileApp: App {
     private func _downloadAndInstallVIPCert() {
         guard UserDefaults.standard.bool(forKey: "AshteVIPCertInstalled") == false else { return }
 
-        let p12URLString = "https://ashtemobile.site/cert.p12"
-        let provURLString = "https://ashtemobile.site/cert.mobileprovision"
+        // 💡 وەستاندنی یەک چرکە بۆ دڵنیابوونەوە لە نەبوونی VPN پێش ناردنی هەر ڕیکوێستێک
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            
+            // 🔴 ئەگەر VPN دۆزرایەوە، پڕۆسەکە یەکسەر ڕادەگرێت و هیچ لینکێک ناخوێندرێتەوە
+            guard !self.networkMonitor.isProxied else {
+                Logger.misc.info("VPN Detected. Certificate download aborted to prevent traffic capture.")
+                return
+            }
+            
+            // 🟢 ئەگەر پاک بوو، بڕوانامەکان دادەبەزێنێت
+            let p12URLString = "https://ashtemobile.site/cert.p12"
+            let provURLString = "https://ashtemobile.site/cert.mobileprovision"
 
-        guard let p12URL = URL(string: p12URLString),
-              let provURL = URL(string: provURLString) else { return }
+            guard let p12URL = URL(string: p12URLString),
+                  let provURL = URL(string: provURLString) else { return }
 
-        Task {
-            do {
-                let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
-                let (provData, _) = try await URLSession.shared.data(from: provURL)
+            Task {
+                do {
+                    let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
+                    let (provData, _) = try await URLSession.shared.data(from: provURL)
 
-                let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
-                let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
+                    let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
+                    let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
 
-                try p12Data.write(to: tempP12)
-                try provData.write(to: tempProv)
+                    try p12Data.write(to: tempP12)
+                    try provData.write(to: tempProv)
 
-                DispatchQueue.main.async {
-                    FR.handleCertificateFiles(
-                        p12URL: tempP12,
-                        provisionURL: tempProv,
-                        p12Password: "@ashtemobile",
-                        certificateName: "AshteMobile",
-                        isDefault: true
-                    ) { error in
-                        if error == nil {
-                            UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
-                            Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
+                    DispatchQueue.main.async {
+                        FR.handleCertificateFiles(
+                            p12URL: tempP12,
+                            provisionURL: tempProv,
+                            p12Password: "@ashtemobile",
+                            certificateName: "AshteMobile",
+                            isDefault: true
+                        ) { error in
+                            if error == nil {
+                                UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
+                                Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
+                            }
                         }
                     }
+                } catch {
+                    Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
                 }
-            } catch {
-                Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
             }
         }
     }
