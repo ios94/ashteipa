@@ -21,7 +21,14 @@ struct SourcesView: View {
     @State private var _searchText = ""
     
     private var _filteredSources: [AltSource] {
-        _sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
+        _sources.filter { source in
+            let urlString = source.sourceURL?.absoluteString ?? ""
+            // ڕێگریکردن لە نیشاندانی سۆرسی گیتھەبی ئاپس لە تابی Sources
+            if urlString.contains("ashtemobile94.json") {
+                return false
+            }
+            return _searchText.isEmpty || (source.name?.localizedCaseInsensitiveContains(_searchText) ?? false)
+        }
     }
     
     @FetchRequest(
