@@ -39,7 +39,7 @@ struct SourceAppsView: View {
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
     
-    // 💡 گۆڕاوی نوێ بۆ تابەکان (All, Games, Apps)
+    // 💡 گۆڕاوی تابەکان (All, Games, Apps)
     @State private var _selectedCategory = "All"
 
 	private var _navigationTitle: String {
@@ -73,13 +73,13 @@ struct SourceAppsView: View {
 					let _sources,
 					!_sources.isEmpty
 				{
-                    // تێبینی: بۆ ئەوەی فلتەرەکە بەتەواوی کار بکات، دەبێت ئەم _selectedCategory
-                    // بنێردرێتە ناو SourceAppsTableRepresentableView لە داهاتوودا.
+                    // 💡 لێرەدا گۆڕاوی selectedCategoryمان نارد بۆ فایلەکەی تر
 					SourceAppsTableRepresentableView(
 						sources: _sources,
 						searchText: $_searchText,
 						sortOption: $_sortOption,
 						sortAscending: $_sortAscending,
+                        selectedCategory: $_selectedCategory, // 👈 ئەم دێڕە زیاد کرا
 						onSelect: {self._selectedRoute = $0}
 					)
 					.ignoresSafeArea()
