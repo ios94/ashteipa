@@ -41,12 +41,11 @@ struct AppsView: View {
                 .padding(.top, 4)
                 
                 if let firstSource = _sources.first, let repo = viewModel.sources[firstSource] {
-                    StandaloneAppsTableView(
+                    SourceAppsTableRepresentableView(
                         sources: [repo],
                         searchText: $_searchText,
                         sortOption: .constant(SourceAppsView.SortOption(rawValue: _sortOptionRawValue) ?? .default),
                         sortAscending: $_sortAscending,
-                        selectedCategory: $_selectedCategory,
                         onSelect: { self._selectedRoute = $0 }
                     )
                     .ignoresSafeArea()
