@@ -13,7 +13,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
     @Binding var searchText: String
     @Binding var sortOption: SourceAppsView.SortOption
     @Binding var sortAscending: Bool
-    @Binding var selectedCategory: String // 💡 زیادکراوە بۆ بەستنەوەی بە تابەکانەوە
+    @Binding var selectedCategory: String
     var onSelect: (SourceAppsView.SourceAppRoute) -> Void
     
     func makeUIView(context: Context) -> UITableView {
@@ -62,7 +62,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
         let searchChanged = context.coordinator.searchText != searchText
         let sortOptionChanged = context.coordinator.sortOption != sortOption
         let sortDirectionChanged = context.coordinator.sortAscending != sortAscending
-        let categoryChanged = context.coordinator.selectedCategory != selectedCategory // 💡 پشکنینی گۆڕانی تابەکان
+        let categoryChanged = context.coordinator.selectedCategory != selectedCategory
         
         context.coordinator.sources = sources
         context.coordinator.searchText = searchText
@@ -81,7 +81,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
             searchText: searchText,
             sortOption: sortOption,
             sortAscending: sortAscending,
-            selectedCategory: selectedCategory, // 💡 ناردنی تابەکە بۆ ڕێکخەر
+            selectedCategory: selectedCategory,
             onSelect: onSelect
         )
     }
@@ -93,7 +93,7 @@ extension SourceAppsTableRepresentableView {
         var searchText: String
         var sortOption: SourceAppsView.SortOption
         var sortAscending: Bool
-        var selectedCategory: String // 💡 هەڵگرتنی تابی هەڵبژێردراو
+        var selectedCategory: String
         let onSelect: (SourceAppsView.SourceAppRoute) -> Void
         
         private var _groupedAppsByNameFirstLetter: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
@@ -138,14 +138,12 @@ extension SourceAppsTableRepresentableView {
         
         private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
             let filtered = _allAppsWithSource.filter { appTuple in
-                // 1. پشکنینی سێرچ
                 let matchesSearch = searchText.isEmpty ||
                 (appTuple.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
                 
-                // 2. پشکنینی تابەکانی پۆلێنکردن
                 var matchesCategory = true
                 if selectedCategory == "Games" {
                     matchesCategory = (appTuple.app.name?.localizedCaseInsensitiveContains("game") ?? false) ||
@@ -280,49 +278,7 @@ extension SourceAppsTableRepresentableView {
             _sortedSectionTitles.firstIndex(of: title) ?? 0
         }
         
-        func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-            let entry: (source: ASRepository, app: ASRepository.App)
-            switch sortOption {
-            case .default: entry = _sortedApps[indexPath.row]
-            case .name: entry = _groupedAppsByNameFirstLetter[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-            case .date: entry = _groupedAppsByDate[_sortedSectionTitles[indexPath.section]]?[indexPath.row] ?? _sortedApps[indexPath.row]
-            }
-            
-            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-                let downloadsMenu = UIMenu(
-                    title: .localized("Previous Versions"),
-                    image: UIImage(systemName: "square.and.arrow.down.on.square"),
-                    children: self._contextActions(for: entry.app, with: { version in
-                        if let url = version {
-                            _ = DownloadManager.shared.startDownload(
-                                from: url,
-                                id: entry.app.currentUniqueId
-                            )
-                        }
-                    }, image: UIImage(systemName: "arrow.down"))
-                )
-                return UIMenu(children: [downloadsMenu])
-            }
-        }
-        
-        private func _contextActions(
-            for app: ASRepository.App,
-            with action: @escaping (URL?) -> Void,
-            image: UIImage?
-        ) -> [UIAction] {
-            if let versions = app.versions, !versions.isEmpty {
-                return versions.map { version in
-                    UIAction(title: version.version, image: image) { _ in
-                        action(version.downloadURL)
-                    }
-                }
-            } else {
-                return [
-                    UIAction(title: app.currentVersion ?? "", image: image) { _ in
-                        action(app.currentDownloadUrl)
-                    }
-                ]
-            }
-        }
+        // تێبینی: ئەو دوو فانکشنەی بەرپرس بوون لە دروستکردنی Context Menu بە تەواوی سڕاونەتەوە،
+        // بۆیە ئێستا بە پەنجە داگرتن هیچ لیستێک ناکرێتەوە و لینکەکانت پارێزراون.
     }
 }
