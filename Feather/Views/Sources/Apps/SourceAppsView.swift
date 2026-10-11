@@ -38,7 +38,6 @@ struct SourceAppsView: View {
 	@State var isLoading = true
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
-    @State private var _selectedCategory = "All"
 
 	private var _navigationTitle: String {
 		if object.count == 1 {
@@ -54,33 +53,21 @@ struct SourceAppsView: View {
 	
 	// MARK: Body
 	var body: some View {
-		VStack(spacing: 0) {
-            Picker("Categories", selection: $_selectedCategory) {
-                Text("All").tag("All")
-                Text("Games").tag("Games")
-                Text("Apps").tag("Apps")
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .padding(.top, 8)
-            
-			ZStack {
-				if
-					let _sources,
-					!_sources.isEmpty
-				{
-					SourceAppsTableRepresentableView(
-						sources: _sources,
-						searchText: $_searchText,
-						sortOption: $_sortOption,
-						sortAscending: $_sortAscending,
-						onSelect: {self._selectedRoute = $0}
-					)
-					.ignoresSafeArea()
-				} else {
-					ProgressView()
-				}
+		ZStack {
+			if
+				let _sources,
+				!_sources.isEmpty
+			{
+				SourceAppsTableRepresentableView(
+					sources: _sources,
+					searchText: $_searchText,
+					sortOption: $_sortOption,
+					sortAscending: $_sortAscending,
+					onSelect: {self._selectedRoute = $0}
+				)
+				.ignoresSafeArea()
+			} else {
+				ProgressView()
 			}
 		}
 		.navigationTitle(_navigationTitle)
@@ -96,6 +83,7 @@ struct SourceAppsView: View {
 					}
 				}
 			}
+            // لێرەدا دوگمەی Copy و Patreon بە تەواوی سڕانەوە
 		}
 		.toolbar {
 			NBToolbarMenu(
