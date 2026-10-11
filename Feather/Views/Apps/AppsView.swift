@@ -20,7 +20,6 @@ struct AppsView: View {
     @State private var _selectedCategory = "All"
     @State private var _selectedRoute: SourceAppsView.SourceAppRoute?
     
-    // تەنها سۆرسەکەی تۆ دەهێنێت لە داتابەیس
     @FetchRequest(
         entity: AltSource.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
@@ -31,7 +30,6 @@ struct AppsView: View {
     var body: some View {
         NBNavigationView(.localized("Apps")) {
             VStack(spacing: 0) {
-                // 💡 تابەکانی (All, Games, Apps) ڕێک لە ژێر سێرچەکە
                 Picker("Categories", selection: $_selectedCategory) {
                     Text("All").tag("All")
                     Text("Games").tag("Games")
@@ -42,17 +40,19 @@ struct AppsView: View {
                 .padding(.bottom, 8)
                 .padding(.top, 4)
                 
-                // نیشاندانی بەرنامەکان
                 if let firstSource = _sources.first, let repo = viewModel.sources[firstSource] {
-                    SourceAppsTableRepresentableView(
+                    
+                    // 💡 لێرەدا پشت بە فایلە نوێیە سەربەخۆکە دەبەستین
+                    AppsTableRepresentableView(
                         sources: [repo],
                         searchText: $_searchText,
                         sortOption: .constant(SourceAppsView.SortOption(rawValue: _sortOptionRawValue) ?? .default),
                         sortAscending: $_sortAscending,
-                        selectedCategory: $_selectedCategory, // 👈 ئەم دێڕە گرنگە بۆ کارکردنی تابەکان!
+                        selectedCategory: $_selectedCategory, // 👈 فلتەرەکە لێرە کار دەکات
                         onSelect: { self._selectedRoute = $0 }
                     )
                     .ignoresSafeArea()
+                    
                 } else {
                     VStack {
                         Spacer()
@@ -77,7 +77,6 @@ struct AppsView: View {
         }
     }
     
-    // زیادکردنی سۆرسەکەت بە ئۆتۆماتیکی ئەگەر بوونی نەبوو
     private func _addDefaultSource() {
         let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
         guard let url = URL(string: defaultURLString) else { return }
