@@ -128,9 +128,9 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
-    // 💡 ئەو فەنکشنەی سۆرسەکەی تۆ (as) دەخاتە ناو لیستەکەوە
+    // 💡 ئەو فەنکشنەی سۆرسەکەی تۆ (ashtemobile94.json) دەخاتە ناو لیستەکەوە
     private func _addDefaultSource() {
-        let defaultURLString = "https://https://ashtemobile.site/Ashtemobile.json"
+        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
         
         let containsDefault = _sources.contains { source in
             source.sourceURL?.absoluteString == defaultURLString
