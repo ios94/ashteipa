@@ -20,10 +20,11 @@ struct AppsView: View {
     @State private var _selectedCategory = "All"
     @State private var _selectedRoute: SourceAppsView.SourceAppRoute?
     
+    // تابی Apps تەنها پشت بە لینکی گیتھەب دەبەستێت بێ تێکەڵبوون لەگەڵ Sources
     @FetchRequest(
         entity: AltSource.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
-        predicate: NSPredicate(format: "name == %@ OR sourceURL.absoluteString CONTAINS %@", "Ashtemobile", "ashtemobile94.json"),
+        predicate: NSPredicate(format: "sourceURL.absoluteString CONTAINS %@", "ashtemobile94.json"),
         animation: .snappy
     ) private var _sources: FetchedResults<AltSource>
     
@@ -78,7 +79,7 @@ struct AppsView: View {
         guard let url = URL(string: defaultURLString) else { return }
         
         let newSource = AltSource(context: context)
-        newSource.name = "Ashtemobile"
+        newSource.name = "Ashtemobile Apps"
         newSource.sourceURL = url
         try? context.save()
     }
