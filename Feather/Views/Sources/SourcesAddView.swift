@@ -1,3 +1,10 @@
+//
+//  SourcesAddView.swift
+//  AshteMobile
+//
+//  Created by samara on 10.04.2025.
+//
+
 import SwiftUI
 import NimbleViews
 import AltSourceKit
@@ -221,7 +228,7 @@ extension SourcesAddView {
     }
 }
 
-// MARK: - Logic (نفس المنطق السابق)
+// MARK: - Logic 
 extension SourcesAddView {
     private func _fetchRecommendedRepositories() async {
         let fetched = await _concurrentFetchRepositories(from: recommendedSources)
@@ -252,7 +259,8 @@ extension SourcesAddView {
             for url in urls {
                 group.addTask {
                     await withCheckedContinuation { continuation in
-                        dataService.fetch<ASRepository>(from: url) { (result: RepositoryDataHandler) in
+                        // 💡 لێرەدا <ASRepository> لابرا بۆ ڕێگریکردن لە هەڵەی Ambiguous Type
+                        dataService.fetch(from: url) { (result: RepositoryDataHandler) in
                             switch result {
                             case .success(let repo):
                                 Task { @MainActor in results.append((url: url, data: repo)) }
