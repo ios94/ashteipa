@@ -13,6 +13,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
     @Binding var searchText: String
     @Binding var sortOption: SourceAppsView.SortOption
     @Binding var sortAscending: Bool
+    @Binding var selectedCategory: String // 💡 زیادکراوە بۆ بەستنەوەی بە تابەکانەوە
     var onSelect: (SourceAppsView.SourceAppRoute) -> Void
     
     func makeUIView(context: Context) -> UITableView {
@@ -61,13 +62,15 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
         let searchChanged = context.coordinator.searchText != searchText
         let sortOptionChanged = context.coordinator.sortOption != sortOption
         let sortDirectionChanged = context.coordinator.sortAscending != sortAscending
+        let categoryChanged = context.coordinator.selectedCategory != selectedCategory // 💡 پشکنینی گۆڕانی تابەکان
         
         context.coordinator.sources = sources
         context.coordinator.searchText = searchText
         context.coordinator.sortOption = sortOption
         context.coordinator.sortAscending = sortAscending
+        context.coordinator.selectedCategory = selectedCategory
         
-        if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged {
+        if sourcesChanged || searchChanged || sortOptionChanged || sortDirectionChanged || categoryChanged {
             context.coordinator.invalidateCache()
         }
     }
@@ -78,6 +81,7 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
             searchText: searchText,
             sortOption: sortOption,
             sortAscending: sortAscending,
+            selectedCategory: selectedCategory, // 💡 ناردنی تابەکە بۆ ڕێکخەر
             onSelect: onSelect
         )
     }
@@ -89,6 +93,7 @@ extension SourceAppsTableRepresentableView {
         var searchText: String
         var sortOption: SourceAppsView.SortOption
         var sortAscending: Bool
+        var selectedCategory: String // 💡 هەڵگرتنی تابی هەڵبژێردراو
         let onSelect: (SourceAppsView.SourceAppRoute) -> Void
         
         private var _groupedAppsByNameFirstLetter: [String: [(source: ASRepository, app: ASRepository.App)]] = [:]
@@ -115,12 +120,14 @@ extension SourceAppsTableRepresentableView {
             searchText: String,
             sortOption: SourceAppsView.SortOption,
             sortAscending: Bool,
+            selectedCategory: String,
             onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
         ) {
             self.sources = sources
             self.searchText = searchText
             self.sortOption = sortOption
             self.sortAscending = sortAscending
+            self.selectedCategory = selectedCategory
             self.onSelect = onSelect
             super.init()
             
@@ -130,12 +137,25 @@ extension SourceAppsTableRepresentableView {
         }
         
         private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
-            let filtered = _allAppsWithSource.filter {
-                searchText.isEmpty ||
-                ($0.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                ($0.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                ($0.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                ($0.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
+            let filtered = _allAppsWithSource.filter { appTuple in
+                // 1. پشکنینی سێرچ
+                let matchesSearch = searchText.isEmpty ||
+                (appTuple.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                (appTuple.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
+                
+                // 2. پشکنینی تابەکانی پۆلێنکردن
+                var matchesCategory = true
+                if selectedCategory == "Games" {
+                    matchesCategory = (appTuple.app.name?.localizedCaseInsensitiveContains("game") ?? false) ||
+                                      (appTuple.app.subtitle?.localizedCaseInsensitiveContains("game") ?? false)
+                } else if selectedCategory == "Apps" {
+                    matchesCategory = !(appTuple.app.name?.localizedCaseInsensitiveContains("game") ?? false) &&
+                                      !(appTuple.app.subtitle?.localizedCaseInsensitiveContains("game") ?? false)
+                }
+                
+                return matchesSearch && matchesCategory
             }
             
             switch sortOption {
