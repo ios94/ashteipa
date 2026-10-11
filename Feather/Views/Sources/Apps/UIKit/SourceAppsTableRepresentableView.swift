@@ -286,6 +286,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 			identifier: nil,
 			previewProvider: nil
 		) { _ in
+            // لێرەدا مەنیوی Copy Download URLs بە تەواوی لابراوە
 			
 			let downloadsMenu = UIMenu(
 				title: .localized("Previous Versions"),
