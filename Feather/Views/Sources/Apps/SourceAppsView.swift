@@ -38,9 +38,6 @@ struct SourceAppsView: View {
 	@State var isLoading = true
 	@State var hasLoadedOnce = false
 	@State private var _searchText = ""
-    
-    // 💡 گۆڕاوی تابەکان (All, Games, Apps)
-    @State private var _selectedCategory = "All"
 
 	private var _navigationTitle: String {
 		if object.count == 1 {
@@ -57,29 +54,16 @@ struct SourceAppsView: View {
 	// MARK: Body
 	var body: some View {
 		VStack(spacing: 0) {
-            // 💡 دانانی تابەکان لە ژێر بۆشایی سێرچەکەدا
-            Picker("Categories", selection: $_selectedCategory) {
-                Text("All").tag("All")
-                Text("Games").tag("Games")
-                Text("Apps").tag("Apps")
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .padding(.top, 8)
-            
 			ZStack {
 				if
 					let _sources,
 					!_sources.isEmpty
 				{
-                    // 💡 لێرەدا گۆڕاوی selectedCategoryمان نارد بۆ فایلەکەی تر
 					SourceAppsTableRepresentableView(
 						sources: _sources,
 						searchText: $_searchText,
 						sortOption: $_sortOption,
 						sortAscending: $_sortAscending,
-                        selectedCategory: $_selectedCategory, // 👈 ئەم دێڕە زیاد کرا
 						onSelect: {self._selectedRoute = $0}
 					)
 					.ignoresSafeArea()
