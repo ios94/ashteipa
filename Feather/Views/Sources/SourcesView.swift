@@ -12,11 +12,10 @@ struct SourcesView: View {
     @StateObject var viewModel = SourcesViewModel.shared
     @State private var _isAddingPresenting = false
     @State private var _addingSourceLoading = false
-    @State private var _searchText = ""
     
-    private var _filteredSources: [AltSource] {
-        _sources.filter { _searchText.isEmpty || ($0.name?.localizedCaseInsensitiveContains(_searchText) ?? false) }
-    }
+    // گۆڕاوەکان بۆ سێرچ و تابەکان
+    @State private var _searchText = ""
+    @State private var _selectedCategory = "All"
     
     @FetchRequest(
         entity: AltSource.entity(),
@@ -26,78 +25,34 @@ struct SourcesView: View {
     
     // MARK: Body
     var body: some View {
-        NBNavigationView(.localized("Sources")) {
-            List {
-                if !_filteredSources.isEmpty {
-                    // MARK: - Featured Header Card
-                    Section {
-                        NavigationLink {
-                            SourceAppsView(object: Array(_sources), viewModel: viewModel)
-                        } label: {
-                            HStack(spacing: 16) {
-                                // ئایکۆنێکی مۆدێرن بە باکگراوندێکی gradient
-                                ZStack {
-                                    LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                        .frame(width: 56, height: 56)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                    
-                                    Image(systemName: "square.grid.3x3.fill")
-                                        .font(.system(size: 24, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(.localized("All Repositories"))
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(.localized("Explore all apps from every source"))
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
-                    
-                    // MARK: - Repositories List
-                    NBSection(
-                        .localized("Repositories"),
-                        secondary: _filteredSources.count.description
-                    ) {
-                        ForEach(_filteredSources) { source in
-                            NavigationLink {
-                                SourceAppsView(object: [source], viewModel: viewModel)
-                            } label: {
-                                SourcesCellView(source: source)
-                                    .padding(.vertical, 4)
-                            }
-                        }
-                    }
+        NBNavigationView(.localized("Ashtemobile")) {
+            VStack(spacing: 0) {
+                // تابەکانی (All, Games, Apps)
+                Picker("Categories", selection: $_selectedCategory) {
+                    Text("All").tag("All")
+                    Text("Games").tag("Games")
+                    Text("Apps").tag("Apps")
                 }
-            }
-            .listStyle(.insetGrouped)
-            .searchable(text: $_searchText, placement: .platform())
-            .overlay {
-                if _filteredSources.isEmpty {
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                
+                if _sources.isEmpty {
                     _emptyStateView()
+                } else {
+                    // نیشاندانی ڕاستەوخۆی ئەپەکان
+                    // تێبینی: دەبێت _selectedCategory و _searchText بنێرین بۆ SourceAppsView ئەگەر بتەوێت فلتەریان بکات
+                    SourceAppsView(object: Array(_sources), viewModel: viewModel)
                 }
             }
+            .searchable(text: $_searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search apps...")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         _isAddingPresenting = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 22, weight: .bold))
                             .symbolRenderingMode(.hierarchical)
                     }
                     .disabled(_addingSourceLoading)
@@ -114,6 +69,7 @@ struct SourcesView: View {
         }
         .task(id: Array(_sources)) {
             await viewModel.fetchSources(_sources)
+            _addDefaultSource() // زیادکردنی سۆرسەکە
         }
         #if !NIGHTLY && !DEBUG
         .onAppear {
@@ -126,20 +82,40 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
+    // فەنکشن بۆ دابەزاندنی سۆرسەکەی خۆت بە ئۆتۆماتیکی
+    private func _addDefaultSource() {
+        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
+        
+        let containsDefault = _sources.contains { source in
+            source.url == defaultURLString
+        }
+        
+        if !containsDefault {
+            guard let url = URL(string: defaultURLString) else { return }
+            _addingSourceLoading = true
+            Task {
+                // تێبینی: پشتبەستن بە شێوازی فەنکشنەکەت لە SourcesViewModel، ڕەنگە پێویست بە گۆڕانکاری بێت لێرە
+                await viewModel.addSource(url)
+                _addingSourceLoading = false
+            }
+        }
+    }
+    
     @ViewBuilder
     private func _emptyStateView() -> some View {
         if #available(iOS 17, *) {
             ContentUnavailableView {
-                Label(.localized("No Repositories"), systemImage: "globe.asia.australia.fill")
+                Label(.localized("Loading..."), systemImage: "arrow.down.circle.fill")
                     .symbolRenderingMode(.hierarchical)
                     .foregroundColor(.blue)
             } description: {
-                Text(.localized("Stay updated by adding your favorite app repositories here."))
+                Text(.localized("Fetching Ashtemobile Apps."))
             } actions: {
-                Button(action: { _isAddingPresenting = true }) {
+                // ئەگەر ئۆتۆماتیک کاری نەکرد، ئەم دوگمەیە بەکاردێت
+                Button(action: { _addDefaultSource() }) {
                     HStack {
-                        Image(systemName: "plus")
-                        Text(.localized("Add First Source"))
+                        Image(systemName: "arrow.clockwise")
+                        Text(.localized("Load Apps Manually"))
                     }
                     .fontWeight(.bold)
                     .padding(.horizontal, 24)
