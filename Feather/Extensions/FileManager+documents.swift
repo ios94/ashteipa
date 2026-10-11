@@ -8,14 +8,20 @@
 import Foundation.NSFileManager
 
 extension FileManager {
-	/// Gives apps Signed directory
+    
+    // 💡 ئەمە فۆڵدەرە شاراوەکەی ناو سیستەمە کە هیچ کەس نایبینێت
+    private var hiddenDirectory: URL {
+        return FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
+    }
+    
+	/// Gives apps Archives directory
 	var archives: URL {
-		URL.documentsDirectory.appendingPathComponent("Archives")
+        hiddenDirectory.appendingPathComponent("Archives")
 	}
 	
 	/// Gives apps Signed directory
 	var signed: URL {
-		URL.documentsDirectory.appendingPathComponent("Signed")
+        hiddenDirectory.appendingPathComponent("Signed")
 	}
 	
 	/// Gives apps Signed directory with a UUID appending path
@@ -25,7 +31,7 @@ extension FileManager {
 	
 	/// Gives apps Unsigned directory
 	var unsigned: URL {
-		URL.documentsDirectory.appendingPathComponent("Unsigned")
+        hiddenDirectory.appendingPathComponent("Unsigned")
 	}
 	
 	/// Gives apps Unsigned directory with a UUID appending path
@@ -35,8 +41,9 @@ extension FileManager {
 	
 	/// Gives apps Certificates directory
 	var certificates: URL {
-		URL.documentsDirectory.appendingPathComponent("Certificates")
+        hiddenDirectory.appendingPathComponent("Certificates")
 	}
+    
 	/// Gives apps Certificates directory with a UUID appending path
 	func certificates(_ uuid: String) -> URL {
 		certificates.appendingPathComponent(uuid)
