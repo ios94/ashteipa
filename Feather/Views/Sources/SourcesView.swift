@@ -6,9 +6,13 @@ import NimbleViews
 // MARK: - View
 struct SourcesView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    // 💡 هێنانی داتابەیسەکە بۆ خەزنکردنی سۆرسەکە
+    @Environment(\.managedObjectContext) private var context
+    
     #if !NIGHTLY && !DEBUG
     @AppStorage("AshteMobile.shouldStar") private var _shouldStar: Int = 0
     #endif
+    
     @StateObject var viewModel = SourcesViewModel.shared
     @State private var _isAddingPresenting = false
     @State private var _addingSourceLoading = false
@@ -41,7 +45,6 @@ struct SourcesView: View {
                     _emptyStateView()
                 } else {
                     // نیشاندانی ڕاستەوخۆی ئەپەکان
-                    // تێبینی: دەبێت _selectedCategory و _searchText بنێرین بۆ SourceAppsView ئەگەر بتەوێت فلتەریان بکات
                     SourceAppsView(object: Array(_sources), viewModel: viewModel)
                 }
             }
@@ -68,8 +71,8 @@ struct SourcesView: View {
             }
         }
         .task(id: Array(_sources)) {
+            _addDefaultSource() // 💡 زیادکردنی سۆرسەکە پێش هێنانەوەی داتاکان
             await viewModel.fetchSources(_sources)
-            _addDefaultSource() // زیادکردنی سۆرسەکە
         }
         #if !NIGHTLY && !DEBUG
         .onAppear {
@@ -82,21 +85,27 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
-    // فەنکشن بۆ دابەزاندنی سۆرسەکەی خۆت بە ئۆتۆماتیکی
+    // 💡 فەنکشن بۆ دابەزاندنی سۆرسەکەی خۆت لەڕێگەی CoreData
     private func _addDefaultSource() {
         let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
         
+        // پشکنین دەکات بزانێت ئایا سۆرسەکە پێشتر زیاد کراوە یان نا
         let containsDefault = _sources.contains { source in
-            source.url == defaultURLString
+            source.sourceURL?.absoluteString == defaultURLString
         }
         
         if !containsDefault {
             guard let url = URL(string: defaultURLString) else { return }
-            _addingSourceLoading = true
-            Task {
-                // تێبینی: پشتبەستن بە شێوازی فەنکشنەکەت لە SourcesViewModel، ڕەنگە پێویست بە گۆڕانکاری بێت لێرە
-                await viewModel.addSource(url)
-                _addingSourceLoading = false
+            
+            // زیادکردنی سۆرسەکە بۆ ناو داتابەیسی ئەپەکە (CoreData)
+            let newSource = AltSource(context: context)
+            newSource.name = "Ashtemobile"
+            newSource.sourceURL = url
+            
+            do {
+                try context.save() // سەیڤکردنی سۆرسەکە
+            } catch {
+                print("Error saving default source: \(error.localizedDescription)")
             }
         }
     }
@@ -111,7 +120,6 @@ extension SourcesView {
             } description: {
                 Text(.localized("Fetching Ashtemobile Apps."))
             } actions: {
-                // ئەگەر ئۆتۆماتیک کاری نەکرد، ئەم دوگمەیە بەکاردێت
                 Button(action: { _addDefaultSource() }) {
                     HStack {
                         Image(systemName: "arrow.clockwise")
