@@ -145,13 +145,29 @@ extension SourceAppsTableRepresentableView {
                 (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
                 
-                // 2. پشکنینی کاتیگۆری بە شێوەیەکی دروست
+                // 2. پشکنینی کاتیگۆری (بە بێ بەکارهێنانی appCategory بۆ ئەوەی کۆمایڵەر ئیرۆر نەدات)
                 var matchesCategory = true
                 if selectedCategory != "All" {
-                    // لێرەدا پشت بە پۆلێنی ناو فایلە JSONـەکە دەبەستین
-                    let categoryString = String(describing: appTuple.app.appCategory).lowercased()
-                    let isGame = categoryString.contains("game")
+                    let name = appTuple.app.name?.lowercased() ?? ""
+                    let bundleId = appTuple.app.bundleIdentifier?.lowercased() ?? ""
                     
+                    // لیستێک لەو وشە و مەرجانەی کە یارییەکان دیاری دەکەن (وەک لە JSONـەکەدا بینرا)
+                    let isGame = name.contains("game") || 
+                                 name.contains("puzzle") || 
+                                 name.contains("rpg") || 
+                                 name.contains("survivor") || 
+                                 name.contains("racing") || 
+                                 name.contains("climb") || 
+                                 name.contains("attack") || 
+                                 name.contains("blast") || 
+                                 name.contains("merge") ||
+                                 name.contains("story") ||
+                                 name.contains("idle") ||
+                                 name.contains("shooter") ||
+                                 bundleId.contains("game") ||
+                                 bundleId.contains("play") ||
+                                 bundleId.contains("entertainment")
+
                     if selectedCategory == "Games" {
                         matchesCategory = isGame
                     } else if selectedCategory == "Apps" {
