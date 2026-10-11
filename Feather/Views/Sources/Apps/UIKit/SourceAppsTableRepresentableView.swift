@@ -145,24 +145,13 @@ extension SourceAppsTableRepresentableView {
                 (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
                 
-                // 2. پشکنینی کاتیگۆری (بە بێ کێشەی bundleIdentifier)
+                // 2. پشکنینی کاتیگۆری بەپێی جۆری ڕاستەقینەی ناو JSON (type / category)
                 var matchesCategory = true
                 if selectedCategory != "All" {
-                    let name = appTuple.app.name?.lowercased() ?? ""
+                    // بەکارهێنانی type بۆ جیاکردنەوەی پاک و بێگەردی ئەپ و یارییەکان
+                    let appType = appTuple.app.type?.lowercased() ?? ""
+                    let isGame = appType == "games" || appType == "game"
                     
-                    let isGame = name.contains("game") || 
-                                 name.contains("puzzle") || 
-                                 name.contains("rpg") || 
-                                 name.contains("survivor") || 
-                                 name.contains("racing") || 
-                                 name.contains("climb") || 
-                                 name.contains("attack") || 
-                                 name.contains("blast") || 
-                                 name.contains("merge") ||
-                                 name.contains("story") ||
-                                 name.contains("idle") ||
-                                 name.contains("shooter")
-
                     if selectedCategory == "Games" {
                         matchesCategory = isGame
                     } else if selectedCategory == "Apps" {
@@ -204,7 +193,6 @@ extension SourceAppsTableRepresentableView {
                     let comparison = n1.localizedCaseInsensitiveCompare(n2) == .orderedAscending
                     return sortAscending ? comparison : !comparison
                 }
-                // 💡 لێرەدا کێشەی (Ambiguous Type) چارەسەر کرا بە دیاریکردنی جۆری String
                 _groupedAppsByNameFirstLetter = Dictionary(grouping: sorted) { appTuple -> String in
                     let first = appTuple.app.name?.trimmingCharacters(in: .whitespacesAndNewlines).first?.uppercased() ?? "#"
                     return first.range(of: "[A-Z]", options: .regularExpression) != nil ? first : "#"
