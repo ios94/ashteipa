@@ -69,7 +69,7 @@ struct SourcesView: View {
                     }
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                     
-                    // MARK: - Repositories List
+                    // MARK: - Repositories List (سۆرسەکەی تۆ لێرە دیار دەبێت)
                     NBSection(
                         .localized("Repositories"),
                         secondary: _filteredSources.count.description
@@ -114,7 +114,7 @@ struct SourcesView: View {
             }
         }
         .task(id: Array(_sources)) {
-            _addDefaultSource() // 💡 زیادکردنی سۆرسەکەی تۆ بێ ئەوەی دیزاین تێکبدات
+            _addDefaultSource() // 💡 ڕاستەوخۆ سۆرسەکەی تۆ زیاد دەکات و لە شاشەکەدا نیشانی دەدات
             await viewModel.fetchSources(_sources)
         }
         #if !NIGHTLY && !DEBUG
@@ -128,9 +128,9 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
-    // 💡 زیادکردنی سۆرسە بنەڕەتییەکە لەڕێگەی CoreData
+    // 💡 ئەو فەنکشنەی سۆرسەکەی تۆ (as) دەخاتە ناو لیستەکەوە
     private func _addDefaultSource() {
-        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
+        let defaultURLString = "https://https://ashtemobile.site/Ashtemobile.json"
         
         let containsDefault = _sources.contains { source in
             source.sourceURL?.absoluteString == defaultURLString
