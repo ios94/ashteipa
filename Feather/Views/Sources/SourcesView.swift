@@ -1,10 +1,3 @@
-//
-//  SourcesView.swift
-//  AshteMobile
-//
-//  Created by samara on 1.05.2025.
-//
-
 import CoreData
 import AltSourceKit
 import SwiftUI
@@ -13,8 +6,6 @@ import NimbleViews
 // MARK: - View
 struct SourcesView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.managedObjectContext) private var context
-    
     #if !NIGHTLY && !DEBUG
     @AppStorage("AshteMobile.shouldStar") private var _shouldStar: Int = 0
     #endif
@@ -44,6 +35,7 @@ struct SourcesView: View {
                             SourceAppsView(object: Array(_sources), viewModel: viewModel)
                         } label: {
                             HStack(spacing: 16) {
+                                // ئایکۆنێکی مۆدێرن بە باکگراوندێکی gradient
                                 ZStack {
                                     LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
                                         .frame(width: 56, height: 56)
@@ -121,7 +113,6 @@ struct SourcesView: View {
             }
         }
         .task(id: Array(_sources)) {
-            _addDefaultSource()
             await viewModel.fetchSources(_sources)
         }
         #if !NIGHTLY && !DEBUG
@@ -134,28 +125,6 @@ struct SourcesView: View {
 
 // MARK: - Extension: View Components
 extension SourcesView {
-    
-    private func _addDefaultSource() {
-        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
-        
-        let containsDefault = _sources.contains { source in
-            source.sourceURL?.absoluteString == defaultURLString
-        }
-        
-        if !containsDefault {
-            guard let url = URL(string: defaultURLString) else { return }
-            
-            let newSource = AltSource(context: context)
-            newSource.name = "Ashtemobile"
-            newSource.sourceURL = url
-            
-            do {
-                try context.save()
-            } catch {
-                print("Error saving default source: \(error.localizedDescription)")
-            }
-        }
-    }
     
     @ViewBuilder
     private func _emptyStateView() -> some View {
