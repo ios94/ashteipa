@@ -63,6 +63,7 @@ struct SourceAppsView: View {
 					searchText: $_searchText,
 					sortOption: $_sortOption,
 					sortAscending: $_sortAscending,
+					selectedCategory: .constant("All"), // 💡 کێشەکە لێرە چارەسەر کرا
 					onSelect: {self._selectedRoute = $0}
 				)
 				.ignoresSafeArea()
