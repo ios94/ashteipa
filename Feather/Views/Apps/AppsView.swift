@@ -49,6 +49,7 @@ struct AppsView: View {
                         searchText: $_searchText,
                         sortOption: .constant(SourceAppsView.SortOption(rawValue: _sortOptionRawValue) ?? .default),
                         sortAscending: $_sortAscending,
+                        selectedCategory: $_selectedCategory, // 👈 ئەم دێڕە گرنگە بۆ کارکردنی تابەکان!
                         onSelect: { self._selectedRoute = $0 }
                     )
                     .ignoresSafeArea()
