@@ -10,7 +10,6 @@ import AltSourceKit
 import SwiftUI
 import NimbleViews
 
-// MARK: - View
 struct SourcesView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #if !NIGHTLY && !DEBUG
@@ -31,12 +30,10 @@ struct SourcesView: View {
         animation: .snappy
     ) private var _sources: FetchedResults<AltSource>
     
-    // MARK: Body
     var body: some View {
         NBNavigationView(.localized("Sources")) {
             List {
                 if !_filteredSources.isEmpty {
-                    // MARK: - Featured Header Card
                     Section {
                         NavigationLink {
                             SourceAppsView(object: Array(_sources), viewModel: viewModel)
@@ -74,7 +71,6 @@ struct SourcesView: View {
                     }
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                     
-                    // MARK: - Repositories List
                     NBSection(
                         .localized("Repositories"),
                         secondary: _filteredSources.count.description
@@ -129,9 +125,7 @@ struct SourcesView: View {
     }
 }
 
-// MARK: - Extension: View Components
 extension SourcesView {
-    
     @ViewBuilder
     private func _emptyStateView() -> some View {
         if #available(iOS 17, *) {
