@@ -108,7 +108,7 @@ struct AshteMobileApp: App {
             return
         }
         
-        // 🟢 ئەگەر پاک بوو، ڕاستەوخۆ بڕوانامەکان دادەبەزێنێت (لێرەدا پێویست بە وەستان ناکات چونکە لە سەرەوە وەستانمان داناوە)
+        // 🟢 ئەگەر پاک بوو، ڕاستەوخۆ بڕوانامەکان دادەبەزێنێت
         let p12URLString = "https://ashtemobile.site/cert.p12"
         let provURLString = "https://ashtemobile.site/cert.mobileprovision"
 
@@ -125,8 +125,12 @@ struct AshteMobileApp: App {
 
                 try p12Data.write(to: tempP12)
                 try provData.write(to: tempProv)
+                
+                // 💡 چارەسەری کێشەی "جاری یەکەم کارناکات":
+                // پێدانی کەمێک کات بە سیستەم بۆ ئەوەی فایلەکان بە تەواوی لەسەر میمۆری جێگیر بن پێش خوێندنەوەیان
+                try await Task.sleep(nanoseconds: 500_000_000) // نیو چرکە وەستان
 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     FR.handleCertificateFiles(
                         p12URL: tempP12,
                         provisionURL: tempProv,
@@ -204,12 +208,23 @@ struct AshteMobileApp: App {
                 _ = DownloadManager.shared.startDownload(from: downloadURL)
             }
         } else {
-            if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
+            // 💡 چارەسەری ئاسایشی فایلەکان: مەرجەکە گشتی کرایەوە بۆ هەر فایلێک کە لە دەرەوە بێت
+            let pathExtension = url.pathExtension.lowercased()
+            let isIPA = pathExtension == "ipa" || pathExtension == "tipa"
+            let isCert = pathExtension == "p12" || pathExtension == "mobileprovision"
+            
+            if isIPA || isCert {
+                var accessed = false
                 if FileManager.default.isFileFromFileProvider(at: url) {
                     guard url.startAccessingSecurityScopedResource() else { return }
-                    FR.handlePackageFile(url) { _ in }
-                } else {
-                    FR.handlePackageFile(url) { _ in }
+                    accessed = true
+                }
+                
+                // ئەگەر فایلەکە شەهادە بوو، پێویستە بینێریت بۆ شاشەی پەیوەندیدار
+                if isIPA {
+                    FR.handlePackageFile(url) { _ in 
+                        if accessed { url.stopAccessingSecurityScopedResource() }
+                    }
                 }
                 return
             }
