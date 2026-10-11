@@ -1,3 +1,10 @@
+//
+//  SourcesView.swift
+//  AshteMobile
+//
+//  Created by samara on 1.05.2025.
+//
+
 import CoreData
 import AltSourceKit
 import SwiftUI
@@ -69,7 +76,7 @@ struct SourcesView: View {
                     }
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                     
-                    // MARK: - Repositories List (سۆرسەکەی تۆ لێرە دیار دەبێت)
+                    // MARK: - Repositories List
                     NBSection(
                         .localized("Repositories"),
                         secondary: _filteredSources.count.description
@@ -114,7 +121,7 @@ struct SourcesView: View {
             }
         }
         .task(id: Array(_sources)) {
-            _addDefaultSource() // 💡 ڕاستەوخۆ سۆرسەکەی تۆ زیاد دەکات و لە شاشەکەدا نیشانی دەدات
+            _addDefaultSource()
             await viewModel.fetchSources(_sources)
         }
         #if !NIGHTLY && !DEBUG
@@ -128,7 +135,6 @@ struct SourcesView: View {
 // MARK: - Extension: View Components
 extension SourcesView {
     
-    // 💡 ئەو فەنکشنەی سۆرسەکەی تۆ (ashtemobile94.json) دەخاتە ناو لیستەکەوە
     private func _addDefaultSource() {
         let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
         
