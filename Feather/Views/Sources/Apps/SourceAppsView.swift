@@ -57,7 +57,7 @@ struct SourceAppsView: View {
 	// MARK: Body
 	var body: some View {
 		VStack(spacing: 0) {
-            // 💡 تابەکانی (All, Games, Apps) ڕێک لە ژێر سێرچەکە
+            // 💡 دانانی تابەکان لە ژێر بۆشایی سێرچەکەدا
             Picker("Categories", selection: $_selectedCategory) {
                 Text("All").tag("All")
                 Text("Games").tag("Games")
@@ -66,18 +66,20 @@ struct SourceAppsView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.bottom, 8)
-            .padding(.top, 4)
+            .padding(.top, 8)
             
 			ZStack {
 				if
 					let _sources,
 					!_sources.isEmpty
 				{
+                    // 💡 لێرەدا گۆڕاوی selectedCategoryمان نارد بۆ فایلەکەی تر
 					SourceAppsTableRepresentableView(
 						sources: _sources,
 						searchText: $_searchText,
 						sortOption: $_sortOption,
 						sortAscending: $_sortAscending,
+                        selectedCategory: $_selectedCategory, // 👈 ئەم دێڕە زیاد کرا
 						onSelect: {self._selectedRoute = $0}
 					)
 					.ignoresSafeArea()
@@ -87,7 +89,7 @@ struct SourceAppsView: View {
 			}
 		}
 		.navigationTitle(_navigationTitle)
-		.searchable(text: $_searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
+		.searchable(text: $_searchText, placement: .platform())
 		.toolbarTitleMenu {
 			if
 				let _sources,
@@ -176,6 +178,8 @@ extension SourceAppsView {
 		}
 	}
 }
+
+import SwiftUI
 
 extension View {
 	@ViewBuilder
