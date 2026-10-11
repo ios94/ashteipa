@@ -138,19 +138,25 @@ extension SourceAppsTableRepresentableView {
         
         private func _calculateSortedApps() -> [(source: ASRepository, app: ASRepository.App)] {
             let filtered = _allAppsWithSource.filter { appTuple in
+                // 1. پشکنینی سێرچ
                 let matchesSearch = searchText.isEmpty ||
                 (appTuple.app.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.description?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.subtitle?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 (appTuple.app.localizedDescription?.localizedCaseInsensitiveContains(searchText) ?? false)
                 
+                // 2. پشکنینی کاتیگۆری بە شێوەیەکی دروست
                 var matchesCategory = true
-                if selectedCategory == "Games" {
-                    matchesCategory = (appTuple.app.name?.localizedCaseInsensitiveContains("game") ?? false) ||
-                                      (appTuple.app.subtitle?.localizedCaseInsensitiveContains("game") ?? false)
-                } else if selectedCategory == "Apps" {
-                    matchesCategory = !(appTuple.app.name?.localizedCaseInsensitiveContains("game") ?? false) &&
-                                      !(appTuple.app.subtitle?.localizedCaseInsensitiveContains("game") ?? false)
+                if selectedCategory != "All" {
+                    // لێرەدا پشت بە پۆلێنی ناو فایلە JSONـەکە دەبەستین
+                    let categoryString = String(describing: appTuple.app.appCategory).lowercased()
+                    let isGame = categoryString.contains("game")
+                    
+                    if selectedCategory == "Games" {
+                        matchesCategory = isGame
+                    } else if selectedCategory == "Apps" {
+                        matchesCategory = !isGame
+                    }
                 }
                 
                 return matchesSearch && matchesCategory
@@ -277,8 +283,5 @@ extension SourceAppsTableRepresentableView {
         func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: String, at index: Int) -> Int {
             _sortedSectionTitles.firstIndex(of: title) ?? 0
         }
-        
-        // تێبینی: ئەو دوو فانکشنەی بەرپرس بوون لە دروستکردنی Context Menu بە تەواوی سڕاونەتەوە،
-        // بۆیە ئێستا بە پەنجە داگرتن هیچ لیستێک ناکرێتەوە و لینکەکانت پارێزراون.
     }
 }
