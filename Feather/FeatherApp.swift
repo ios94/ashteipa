@@ -3,7 +3,7 @@
 //  AshteMobile
 //
 //  Created by samara on 10.04.2025.
-//  Safe Onboarding Integrated
+//  Safe Onboarding Integrated & VPN Detection Added ⚡️
 //
 
 import SwiftUI
@@ -20,10 +20,13 @@ struct AshteMobileApp: App {
     @StateObject var downloadManager = DownloadManager.shared
     let storage = Storage.shared
     
+    // 💡 ١. دروستکردنی چاودێری ڤی‌پی‌ئێن بۆ ئەوەی هەر کە ئەپەکە کرایەوە کاری خۆی بکات
+    @StateObject private var networkMonitor = NetworkMonitor()
+    
     // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
     
-    // 💡 دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
+    // دروستکردنی بایندینگی سەلامەت بۆ ئەوەی Xcode ئیرۆر نەدات
     private var showOnboardingBinding: Binding<Bool> {
         Binding<Bool>(
             get: { !hasCompletedOnboarding },
@@ -33,27 +36,48 @@ struct AshteMobileApp: App {
     
     var body: some Scene {
         WindowGroup {
-            VStack {
-                DownloadHeaderView(downloadManager: downloadManager)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                VariedTabbarView()
-                    .environment(\.managedObjectContext, storage.context)
-                    .onOpenURL(perform: _handleURL)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-            .animation(.smooth, value: downloadManager.manualDownloads.description)
-            
-            // 💡 بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
-            .fullScreenCover(isPresented: showOnboardingBinding) {
-                Group {
-                    if #available(iOS 17.0, *) {
-                        OnboardingView()
-                    } else {
-                        OnboardingViewLegacy()
+            // 💡 ٢. مەرجەکە بۆ زانینی ئەوەی ئایا ڤی‌پی‌ئێن پێیە یان نا
+            Group {
+                if networkMonitor.isProxied {
+                    // 🔴 ئەگەر ڤی‌پی‌ئێن کارا بوو، ئەم شاشەیە دەکرێتەوە و ڕێگری دەکات
+                    ProxyDetectionView(monitor: networkMonitor)
+                } else {
+                    // 🟢 ئەگەر ڤی‌پی‌ئێن نەبوو، ئەپەکەی خۆت ئاسایی کار دەکات
+                    VStack {
+                        DownloadHeaderView(downloadManager: downloadManager)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        VariedTabbarView()
+                            .environment(\.managedObjectContext, storage.context)
+                            .onOpenURL(perform: _handleURL)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    .animation(.smooth, value: downloadManager.manualDownloads.description)
+                    
+                    // بانگکردنی شاشەی خێرهاتنەکە بە سەلامەتی
+                    .fullScreenCover(isPresented: showOnboardingBinding) {
+                        Group {
+                            if #available(iOS 17.0, *) {
+                                OnboardingView()
+                            } else {
+                                OnboardingViewLegacy()
+                            }
+                        }
+                    }
+                    .onAppear {
+                        if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
+                            UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
+                        }
+                        
+                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
+                        
+                        _downloadAndInstallVIPCert()
                     }
                 }
             }
-            
+            // 💡 ٣. کاتێک بەکارهێنەر لە ئەپێکی ترەوە (وەک سێتینگ) دەگەڕێتەوە، دووبارە پشکنین دەکات
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                networkMonitor.checkProxyAndVPN()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
                 DispatchQueue.main.async {
                     UIAlertController.showAlertWithOk(
@@ -61,15 +85,6 @@ struct AshteMobileApp: App {
                         message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
                     )
                 }
-            }
-            .onAppear {
-                if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
-                    UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
-                }
-                
-                UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
-                
-                _downloadAndInstallVIPCert()
             }
         }
     }
