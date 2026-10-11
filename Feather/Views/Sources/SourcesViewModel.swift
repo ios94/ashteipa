@@ -38,13 +38,15 @@ final class SourcesViewModel: ObservableObject {
             let endIndex = min(startIndex + batchSize, sourcesArray.count)
             let batch = sourcesArray[startIndex..<endIndex]
             
+            // 💡 لێرەدا URLەکان دەردەهێنین پێش ئەوەی بچنە ناو Task بۆ ڕێگریکردن لە کێشەی Sendable
+            let batchData = batch.compactMap { source -> (AltSource, URL)? in
+                guard let url = source.sourceURL else { return nil }
+                return (source, url)
+            }
+            
             let batchResults = await withTaskGroup(of: (AltSource, ASRepository?).self, returning: [AltSource: ASRepository].self) { group in
-                for source in batch {
+                for (source, url) in batchData {
                     group.addTask {
-                        guard let url = source.sourceURL else {
-                            return (source, nil)
-                        }
-                        
                         return await withCheckedContinuation { continuation in
                             self._dataService.fetch(from: url) { (result: RepositoryDataHandler) in
                                 switch result {
