@@ -9,10 +9,8 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeIconFiles</key>
-			<array>
-				<string>ashtemobile_extension.png</string>
-			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>ashtemobile_extension</string>
 			<key>CFBundleTypeName</key>
 			<string>iOS Package Archive</string>
 			<key>CFBundleTypeRole</key>
@@ -25,10 +23,8 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFiles</key>
-			<array>
-				<string>ashtemobile_extension.png</string>
-			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>ashtemobile_extension</string>
 			<key>CFBundleTypeName</key>
 			<string>AirDrop friendly iOS app</string>
 			<key>CFBundleTypeRole</key>
@@ -116,7 +112,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLIconFile</key>
-			<string>ashtemobile_extension.png</string>
+			<string>ashtemobile_extension</string>
 			<key>CFBundleURLName</key>
 			<string>com.ashte.mobile</string>
 			<key>CFBundleURLSchemes</key>
@@ -137,6 +133,7 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!-- 💡 ئەم دوو دێڕە گۆڕدران بۆ false بۆ شاردنەوەی فۆڵدەرەکە -->
 	<key>UIFileSharingEnabled</key>
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -148,13 +145,19 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
+				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.archive</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>iOS Package Archive</string>
 			<key>UTTypeIconFile</key>
-			<string>ashtemobile_extension.png</string>
+			<string>ashtemobile_extension</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconText</key>
+				<string>IPA</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>com.ashte.mobile.ipa</string>
 			<key>UTTypeTagSpecification</key>
@@ -172,13 +175,21 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
+				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.archive</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>AirDrop friendly iOS app</string>
 			<key>UTTypeIconFile</key>
-			<string>ashtemobile_extension.png</string>
+			<string>ashtemobile_extension</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconBadgeName</key>
+				<string></string>
+				<key>UTTypeIconText</key>
+				<string>TIPA</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>com.ashte.mobile.tipa</string>
 			<key>UTTypeTagSpecification</key>
