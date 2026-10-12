@@ -193,20 +193,35 @@ extension CertificatesAddView {
 // MARK: - Extension: Logic
 extension CertificatesAddView {
     private func _saveCertificate() {
-        guard
-            let p12URL = _p12URL,
-            let provisionURL = _provisionURL
-        else { return }
+        guard let p12URL = _p12URL, let provisionURL = _provisionURL else { return }
+        
+        // ١. کۆپیکردنی فایلەکان بۆ شوێنێکی پارێزراو پێش ئەوەی شاشەکە دابخرێت و مۆڵەتیان لێ بسەندرێتەوە
+        let fm = FileManager.default
+        let safeP12URL = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".p12")
+        let safeProvURL = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mobileprovision")
         
         let p12Accessed = p12URL.startAccessingSecurityScopedResource()
         let provAccessed = provisionURL.startAccessingSecurityScopedResource()
         
-        let isValid = FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
-        
-        if !isValid {
+        do {
+            if fm.fileExists(atPath: safeP12URL.path) { try fm.removeItem(at: safeP12URL) }
+            if fm.fileExists(atPath: safeProvURL.path) { try fm.removeItem(at: safeProvURL) }
+            
+            try fm.copyItem(at: p12URL, to: safeP12URL)
+            try fm.copyItem(at: provisionURL, to: safeProvURL)
+        } catch {
             if p12Accessed { p12URL.stopAccessingSecurityScopedResource() }
             if provAccessed { provisionURL.stopAccessingSecurityScopedResource() }
-            
+            return
+        }
+        
+        if p12Accessed { p12URL.stopAccessingSecurityScopedResource() }
+        if provAccessed { provisionURL.stopAccessingSecurityScopedResource() }
+        
+        // ٢. پشکنینی پاسۆرد لەسەر فایلە کۆپیکراوەکان
+        let isValid = FR.checkPasswordForCertificate(for: safeP12URL, with: _p12Password, using: safeProvURL)
+        
+        if !isValid {
             UIAlertController.showAlertWithOk(
                 title: .localized("Bad Password"),
                 message: .localized("Please check the password and try again.")
@@ -214,19 +229,24 @@ extension CertificatesAddView {
             return
         }
         
-        // لە جیاتی ئەوەی یەکەمجار شاشەکە دابخەین، با یەکەمجار شەهادەکە سەیڤ بکەین!
-        FR.handleCertificateFiles(
-            p12URL: p12URL,
-            provisionURL: provisionURL,
-            p12Password: _p12Password,
-            certificateName: _certificateName
-        ) { _ in
-            if p12Accessed { p12URL.stopAccessingSecurityScopedResource() }
-            if provAccessed { provisionURL.stopAccessingSecurityScopedResource() }
-            
-            // 💡 دوای ئەوەی بەتەواوی سەیڤ بوو، ئینجا شاشەکە دادەخەین
-            DispatchQueue.main.async {
-                dismiss()
+        // ٣. زۆر گرنگ: هەڵگرتنی ناو و پاسۆردەکە لە گۆڕاوی لۆکاڵی بۆ ئەوەی دوای داخستنی شاشەکە نەبنە هۆی کراش
+        let finalCertName = _certificateName
+        let finalPassword = _p12Password
+        
+        // ٤. داخستنی شاشەکە بە نەرمی
+        dismiss()
+        
+        // ٥. دوای ئەوەی شاشەکە بەتەواوی ون بوو، زانیارییەکان بە سەلامەتی سەیڤ دەکەین لە پشتەوە
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            FR.handleCertificateFiles(
+                p12URL: safeP12URL,
+                provisionURL: safeProvURL,
+                p12Password: finalPassword,
+                certificateName: finalCertName
+            ) { _ in
+                // سڕینەوەی فایلە کاتییەکان دوای سەیڤبوون بۆ پاکڕاگرتنی مۆبایلەکە
+                try? fm.removeItem(at: safeP12URL)
+                try? fm.removeItem(at: safeProvURL)
             }
         }
     }
