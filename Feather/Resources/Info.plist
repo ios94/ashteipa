@@ -11,7 +11,7 @@
 		<dict>
 			<key>CFBundleTypeIconFiles</key>
 			<array>
-				<string>AppIcon</string>
+				<string>ashtemobile_extension.png</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>iOS Package Archive</string>
@@ -27,7 +27,7 @@
 		<dict>
 			<key>CFBundleTypeIconFiles</key>
 			<array>
-				<string>AppIcon</string>
+				<string>ashtemobile_extension.png</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>AirDrop friendly iOS app</string>
@@ -116,7 +116,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLIconFile</key>
-			<string>AppIcon</string>
+			<string>ashtemobile_extension.png</string>
 			<key>CFBundleURLName</key>
 			<string>com.ashte.mobile</string>
 			<key>CFBundleURLSchemes</key>
@@ -148,19 +148,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.content</string>
+				<string>public.archive</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>iOS Package Archive</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBadgeName</key>
-				<string>AppIcon</string>
-				<key>UTTypeIconText</key>
-				<string>IPA</string>
-			</dict>
+			<key>UTTypeIconFile</key>
+			<string>ashtemobile_extension.png</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.ashte.mobile.ipa</string>
 			<key>UTTypeTagSpecification</key>
@@ -178,19 +172,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.content</string>
+				<string>public.archive</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>AirDrop friendly iOS app</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBadgeName</key>
-				<string>AppIcon</string>
-				<key>UTTypeIconText</key>
-				<string>TIPA</string>
-			</dict>
+			<key>UTTypeIconFile</key>
+			<string>ashtemobile_extension.png</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.ashte.mobile.tipa</string>
 			<key>UTTypeTagSpecification</key>
