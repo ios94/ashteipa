@@ -211,7 +211,10 @@ extension CertificatesAddView {
             p12Password: _p12Password,
             certificateName: _certificateName
         ) { _ in
-            dismiss()
+            // 💡 کێشەی کراشەکە لێرەدا چارەسەر کرا بە بەکارهێنانی DispatchQueue
+            DispatchQueue.main.async {
+                dismiss()
+            }
         }
     }
 }
