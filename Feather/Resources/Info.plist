@@ -133,9 +133,8 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<!-- 💡 ئەم دوو دێڕە گۆڕدران بۆ false بۆ شاردنەوەی فۆڵدەرەکە -->
 	<key>UIFileSharingEnabled</key>
-	<false/>
+	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 	<key>UILaunchScreen</key>
@@ -205,5 +204,18 @@
 			</dict>
 		</dict>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>claration.dev</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>
