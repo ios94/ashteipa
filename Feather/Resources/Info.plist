@@ -9,31 +9,35 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>ashtemobile_extension</string>
+			<key>CFBundleTypeIconFiles</key>
+			<array>
+				<string>ashtemobile_extension.png</string>
+			</array>
 			<key>CFBundleTypeName</key>
-			<string>iOS Package Archive</string>
+			<string>AshteMobile Package</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.ashte.mobile.ipa</string>
+				<string>com.ashtemobile.custom.ipa</string>
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>ashtemobile_extension</string>
+			<key>CFBundleTypeIconFiles</key>
+			<array>
+				<string>ashtemobile_extension.png</string>
+			</array>
 			<key>CFBundleTypeName</key>
-			<string>AirDrop friendly iOS app</string>
+			<string>AshteMobile TrollStore App</string>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>LSHandlerRank</key>
-			<string>Alternate</string>
+			<string>Owner</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.ashte.mobile.tipa</string>
+				<string>com.ashtemobile.custom.tipa</string>
 			</array>
 		</dict>
 	</array>
@@ -112,7 +116,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLIconFile</key>
-			<string>ashtemobile_extension</string>
+			<string>ashtemobile_extension.png</string>
 			<key>CFBundleURLName</key>
 			<string>com.ashte.mobile</string>
 			<key>CFBundleURLSchemes</key>
@@ -144,21 +148,17 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.content</string>
+				<string>public.archive</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>iOS Package Archive</string>
-			<key>UTTypeIconFile</key>
-			<string>ashtemobile_extension</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconText</key>
-				<string>IPA</string>
-			</dict>
+			<string>AshteMobile Package</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>ashtemobile_extension.png</string>
+			</array>
 			<key>UTTypeIdentifier</key>
-			<string>com.ashte.mobile.ipa</string>
+			<string>com.ashtemobile.custom.ipa</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
@@ -174,23 +174,17 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>com.apple.itunes.ipa</string>
 				<string>public.data</string>
-				<string>public.content</string>
+				<string>public.archive</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>AirDrop friendly iOS app</string>
-			<key>UTTypeIconFile</key>
-			<string>ashtemobile_extension</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBadgeName</key>
-				<string></string>
-				<key>UTTypeIconText</key>
-				<string>TIPA</string>
-			</dict>
+			<string>AshteMobile TrollStore App</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>ashtemobile_extension.png</string>
+			</array>
 			<key>UTTypeIdentifier</key>
-			<string>com.ashte.mobile.tipa</string>
+			<string>com.ashtemobile.custom.tipa</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
