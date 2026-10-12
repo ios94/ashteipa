@@ -128,9 +128,9 @@ struct AshteMobileApp: App {
                 
                 // 💡 چارەسەری کێشەی "جاری یەکەم کارناکات":
                 // پێدانی کەمێک کات بە سیستەم بۆ ئەوەی فایلەکان بە تەواوی لەسەر میمۆری جێگیر بن پێش خوێندنەوەیان
-                try await Task.sleep(nanoseconds: 500_000_000) // نیو چرکە وەستان
+                try await Task.sleep(nanoseconds: 1_000_000_000) // ١ چرکە وەستان بۆ دڵنیایی زیاتر
 
-                await MainActor.run {
+                DispatchQueue.main.async {
                     FR.handleCertificateFiles(
                         p12URL: tempP12,
                         provisionURL: tempProv,
