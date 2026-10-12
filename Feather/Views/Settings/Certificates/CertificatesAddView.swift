@@ -195,9 +195,20 @@ extension CertificatesAddView {
     private func _saveCertificate() {
         guard
             let p12URL = _p12URL,
-            let provisionURL = _provisionURL,
-            FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
-        else {
+            let provisionURL = _provisionURL
+        else { return }
+        
+        // 💡 چارەسەری کراش: وەرگرتنی مۆڵەتی کاتی بۆ خوێندنەوەی فایلەکان
+        let p12Accessed = p12URL.startAccessingSecurityScopedResource()
+        let provAccessed = provisionURL.startAccessingSecurityScopedResource()
+        
+        // پشکنینی پاسۆردەکە
+        let isValid = FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
+        
+        if !isValid {
+            if p12Accessed { p12URL.stopAccessingSecurityScopedResource() }
+            if provAccessed { provisionURL.stopAccessingSecurityScopedResource() }
+            
             UIAlertController.showAlertWithOk(
                 title: .localized("Bad Password"),
                 message: .localized("Please check the password and try again.")
@@ -205,15 +216,20 @@ extension CertificatesAddView {
             return
         }
         
-        FR.handleCertificateFiles(
-            p12URL: p12URL,
-            provisionURL: provisionURL,
-            p12Password: _p12Password,
-            certificateName: _certificateName
-        ) { _ in
-            // 💡 کێشەی کراشەکە لێرەدا چارەسەر کرا بە بەکارهێنانی DispatchQueue
-            DispatchQueue.main.async {
-                dismiss()
+        // ١. یەکەمجار شاشەکە بە نەرمی دادەخەین بەبێ هیچ فشارێک
+        dismiss()
+        
+        // ٢. دوای نیو چرکە (کاتێک شاشەکە بەتەواوی داخراوە)، شەهادەکە سەیڤ دەکەین لە پشتەوە
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            FR.handleCertificateFiles(
+                p12URL: p12URL,
+                provisionURL: provisionURL,
+                p12Password: _p12Password,
+                certificateName: _certificateName
+            ) { _ in
+                // پاش تەواوبوون، دەستبەرداری مۆڵەتی فایلەکان دەبین
+                if p12Accessed { p12URL.stopAccessingSecurityScopedResource() }
+                if provAccessed { provisionURL.stopAccessingSecurityScopedResource() }
             }
         }
     }
