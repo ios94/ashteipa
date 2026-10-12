@@ -80,7 +80,18 @@ struct AshteMobileApp: App {
                         
                         UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
                         
-                        _downloadAndInstallVIPCert()
+                        // 💡 چارەسەری کراش: تەنها کاتێک شەهادەکە دابەزێنە کە شاشەی سەرەتا (Onboarding) تەواو بووبێت و دیار نەبێت
+                        if hasCompletedOnboarding {
+                            _downloadAndInstallVIPCert()
+                        }
+                    }
+                    // 💡 ئەمە زیاد کراوە: هەرکە بەکارهێنەر شاشەی سەرەتای تەواو کرد، یەکسەر شەهادەکەی بۆ داخل دەکات
+                    .onChange(of: hasCompletedOnboarding) { completed in
+                        if completed {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                _downloadAndInstallVIPCert()
+                            }
+                        }
                     }
                 }
             }
