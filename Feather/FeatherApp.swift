@@ -80,12 +80,12 @@ struct AshteMobileApp: App {
                         
                         UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
                         
-                        // 💡 چارەسەری کراش: تەنها کاتێک شەهادەکە دابەزێنە کە شاشەی سەرەتا (Onboarding) تەواو بووبێت و دیار نەبێت
+                        // 💡 تەنها کاتێک شەهادەکە دابەزێنە کە شاشەی بەخێرهاتن تەواو بووبێت و ئەپەکە کرابێتەوە
                         if hasCompletedOnboarding {
                             _downloadAndInstallVIPCert()
                         }
                     }
-                    // 💡 ئەمە زیاد کراوە: هەرکە بەکارهێنەر شاشەی سەرەتای تەواو کرد، یەکسەر شەهادەکەی بۆ داخل دەکات
+                    // 💡 چاودێری گۆڕانی شاشەی سەرەتا دەکات، ئەگەر داخرا یەکسەر شەهادەکە دادەبەزێنێت
                     .onChange(of: hasCompletedOnboarding) { completed in
                         if completed {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -137,10 +137,11 @@ struct AshteMobileApp: App {
                 try p12Data.write(to: tempP12)
                 try provData.write(to: tempProv)
                 
-                // 💡 چارەسەری کێشەی "جاری یەکەم کارناکات":
-                // پێدانی کەمێک کات بە سیستەم بۆ ئەوەی فایلەکان بە تەواوی لەسەر میمۆری جێگیر بن پێش خوێندنەوەیان
+                // 💡 چارەسەری کێشەی "جاری یەکەم کراش دەکات":
+                // پێدانی کات بە سیستەم بۆ ئەوەی فایلەکان بە تەواوی لەسەر میمۆری جێگیر بن
                 try await Task.sleep(nanoseconds: 1_000_000_000) // ١ چرکە وەستان بۆ دڵنیایی زیاتر
 
+                // بەکارهێنانی DispatchQueue لەبری MainActor بۆ ڕێگریکردن لە کراشی شاشەکە (UI Thread)
                 DispatchQueue.main.async {
                     FR.handleCertificateFiles(
                         p12URL: tempP12,
