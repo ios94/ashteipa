@@ -20,20 +20,22 @@ extension Storage {
 		isDefault: Bool = false,
 		completion: @escaping (Error?) -> Void
 	) {
-		let generator = UIImpactFeedbackGenerator(style: .light)
-		
-		let new = CertificatePair(context: context)
-		new.uuid = uuid
-		new.date = Date()
-		new.password = password
-		new.ppQCheck = ppq
-		new.expiration = expiration
-		new.nickname = nickname
-		new.isDefault = isDefault
-		Storage.shared.revokagedCertificate(for: new)
-		saveContext()
-		generator.impactOccurred()
-		completion(nil)
+		DispatchQueue.main.async {
+			let generator = UIImpactFeedbackGenerator(style: .light)
+			
+			let new = CertificatePair(context: self.context)
+			new.uuid = uuid
+			new.date = Date()
+			new.password = password
+			new.ppQCheck = ppq
+			new.expiration = expiration
+			new.nickname = nickname
+			new.isDefault = isDefault
+			
+			self.saveContext()
+			generator.impactOccurred()
+			completion(nil)
+		}
 	}
 	
 	func deleteCertificate(for cert: CertificatePair) {
@@ -59,20 +61,9 @@ extension Storage {
 	}
 	
 	func revokagedCertificate(for cert: CertificatePair) {
-		guard !cert.revoked else { return }
-		
-		Zsign.checkRevokage(
-			provisionPath: Storage.shared.getFile(.provision, from: cert)?.path ?? "",
-			p12Path: Storage.shared.getFile(.certificate, from: cert)?.path ?? "",
-			p12Password: cert.password ?? ""
-		) { (status, _, _) in
-			if status == 1 {
-				DispatchQueue.main.async {
-					cert.revoked = true
-					self.saveContext()
-				}
-			}
-		}
+		// 🛑 پشکنینی ڕیڤۆک وەستێنرا: 
+		// ئەمە هۆکاری سەرەکیی کراشەکەی OpenSSL (d2i_OCSP_RESPONSE) بوو کاتێک لینکەکان بلۆک دەکران یان پەڕەی هەڵەیان دەهێنا.
+		return
 	}
 	
 	enum FileRequest: String {
