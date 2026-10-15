@@ -1,6 +1,6 @@
 //
 //  CertificateCellView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 16.04.2025.
 //
@@ -29,7 +29,7 @@ struct CertificatesCellView: View {
 			
 			NBTitleWithSubtitleView(
 				title: title,
-				subtitle: data?.AppIDName ?? .localized("Unknown")
+				subtitle: "AshteMobile"
 			)
 			
 			_certInfoPill(data: cert)
