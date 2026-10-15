@@ -128,8 +128,15 @@ struct AshteMobileApp: App {
 
         Task {
             do {
-                let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
-                let (provData, _) = try await URLSession.shared.data(from: provURL)
+                let (p12Data, p12Response) = try await URLSession.shared.data(from: p12URL)
+                let (provData, provResponse) = try await URLSession.shared.data(from: provURL)
+
+                // 💡 پشکنینی سێرڤەر: دڵنیابوونەوە لەوەی فایلەکە بوونی هەیە (کۆدی ٢٠٠) نەک پەڕەی هەڵە بێت بۆ ئەوەی کراش نەکات
+                guard let p12Http = p12Response as? HTTPURLResponse, p12Http.statusCode == 200,
+                      let provHttp = provResponse as? HTTPURLResponse, provHttp.statusCode == 200 else {
+                    Logger.misc.info("فایلەکانی VIP لە وێبسایت سڕاونەتەوە. دابەزاندن وەستێنرا بۆ ڕێگریکردن لە کراش.")
+                    return
+                }
 
                 let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
                 let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
