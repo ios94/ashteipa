@@ -323,17 +323,17 @@ struct LibraryView: View {
                     }
                 }
             }
-            // 💡 چارەسەری یەکجاری: وەرگرتنی ڕاستەوخۆی ئەپە واژۆکراوەکە لە نۆتیفیکیشنەوە
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { notification in
+            // 💡 قفڵی گشتی بە UserDefaults
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AshteMobile.installApp"))) { _ in
                 let now = Date().timeIntervalSince1970
                 let lastTime = UserDefaults.standard.double(forKey: "AshteMobile.GlobalInstallLock")
                 
-                if now - lastTime > 1.0 {
+                if now - lastTime > 2.0 {
                     UserDefaults.standard.set(now, forKey: "AshteMobile.GlobalInstallLock")
                     
-                    if let signedApp = notification.object as? AppInfoPresentable {
-                        DispatchQueue.main.async {
-                            _selectedInstallAppPresenting = AnyApp(base: signedApp)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if let latest = _signedApps.first {
+                            _selectedInstallAppPresenting = AnyApp(base: latest)
                         }
                     }
                 }
