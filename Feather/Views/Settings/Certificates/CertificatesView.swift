@@ -1,5 +1,5 @@
 //
-//  CertificatesAddView.swift
+//  CertificatesView.swift
 //  Feather
 //
 //  Created by samara on 15.04.2025.
@@ -7,121 +7,152 @@
 
 import SwiftUI
 import NimbleViews
-import UniformTypeIdentifiers
 
 // MARK: - View
-struct CertificatesAddView: View {
-	@Environment(\.dismiss) private var dismiss
+struct CertificatesView: View {
+	@AppStorage("feather.selectedCert") private var _storedSelectedCert: Int = 0
 	
-	@State private var _p12URL: URL? = nil
-	@State private var _provisionURL: URL? = nil
-	@State private var _p12Password: String = ""
-	@State private var _certificateName: String = ""
+	@State private var _isAddingPresenting = false
+	@State private var _isRenamingPresenting = false
+	@State private var _isSelectedInfoPresenting: CertificatePair?
+	@State private var _certToRename: CertificatePair?
+	@State private var _newNickname: String = ""
+
+	// MARK: Fetch
+	@FetchRequest(
+		entity: CertificatePair.entity(),
+		sortDescriptors: [NSSortDescriptor(keyPath: \CertificatePair.date, ascending: false)],
+		animation: .snappy
+	) private var _certificates: FetchedResults<CertificatePair>
 	
-	@State private var _isImportingP12Presenting = false
-	@State private var _isImportingMobileProvisionPresenting = false
+	//
+	private var _bindingSelectedCert: Binding<Int>?
+	private var _selectedCertBinding: Binding<Int> {
+		_bindingSelectedCert ?? $_storedSelectedCert
+	}
 	
-	var saveButtonDisabled: Bool {
-		_p12URL == nil || _provisionURL == nil
+	init(selectedCert: Binding<Int>? = nil) {
+		self._bindingSelectedCert = selectedCert
 	}
 	
 	// MARK: Body
 	var body: some View {
-		NBNavigationView(.localized("New Certificate"), displayMode: .inline) {
-			Form {
-				NBSection(.localized("Files")) {
-					_importButton(.localized("Import Certificate File"), file: _p12URL) {
-						_isImportingP12Presenting = true
+		NBGrid {
+			ForEach(Array(_certificates.enumerated()), id: \.element.uuid) { index, cert in
+				_cellButton(for: cert, at: index)
+			}
+		}
+		.navigationTitle(.localized("Certificates"))
+		.overlay {
+			if _certificates.isEmpty {
+				if #available(iOS 17, *) {
+					ContentUnavailableView {
+						Label(.localized("No Certificates"), systemImage: "questionmark.folder.fill")
+					} description: {
+						Text(.localized("Get started signing by importing your first certificate."))
+					} actions: {
+						Button {
+							_isAddingPresenting = true
+						} label: {
+							NBButton(.localized("Import"), style: .text)
+						}
 					}
-					_importButton(.localized("Import Provisioning File"), file: _provisionURL) {
-						_isImportingMobileProvisionPresenting = true
-					}
-				}
-				NBSection(.localized("Password")) {
-					SecureField(.localized("Enter Password"), text: $_p12Password)
-				} footer: {
-					Text(.localized("Enter the password associated with the private key. Leave it blank if theres no password required."))
-				}
-				
-				Section {
-					TextField(.localized("Nickname (Optional)"), text: $_certificateName)
 				}
 			}
-			.toolbar {
-				NBToolbarButton(role: .cancel)
-				
+		}
+		.toolbar {
+			if _bindingSelectedCert == nil {
 				NBToolbarButton(
-					.localized("Save"),
-					style: .text,
-					placement: .confirmationAction,
-					isDisabled: saveButtonDisabled
+					systemImage: "plus",
+					style: .icon,
+					placement: .topBarTrailing
 				) {
-					_saveCertificate()
+					_isAddingPresenting = true
 				}
 			}
-			.sheet(isPresented: $_isImportingP12Presenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.p12],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._p12URL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
-			}
-			.sheet(isPresented: $_isImportingMobileProvisionPresenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.mobileProvision],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._provisionURL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
+		}
+		.sheet(item: $_isSelectedInfoPresenting) { cert in
+			CertificatesInfoView(cert: cert)
+		}
+		.sheet(isPresented: $_isAddingPresenting) {
+			CertificatesAddView()
+				.presentationDetents([.medium])
+		}
+		.alert(.localized("Change Nickname"), isPresented: $_isRenamingPresenting, presenting: _certToRename) { cert in
+			TextField(.localized("Nickname"), text: $_newNickname)
+			Button(.localized("Cancel"), role: .cancel) { }
+			Button(.localized("OK")) {
+				cert.nickname = _newNickname.isEmpty ? nil : _newNickname
+				Storage.shared.saveContext()
 			}
 		}
 	}
 }
 
-// MARK: - Extension: View
-extension CertificatesAddView {
+// MARK: - View extension
+extension CertificatesView {
 	@ViewBuilder
-	private func _importButton(
-		_ title: String,
-		file: URL?,
-		action: @escaping () -> Void
-	) -> some View {
-		Button(title) {
-			action()
-		}
-		.foregroundColor(file == nil ? .accentColor : .disabled())
-		.disabled(file != nil)
-		.animation(.easeInOut(duration: 0.3), value: file != nil)
-	}
-}
-
-// MARK: - Extension: View (import)
-extension CertificatesAddView {
-	private func _saveCertificate() {
-		guard
-			let p12URL = _p12URL,
-			let provisionURL = _provisionURL,
-			FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
-		else {
-			UIAlertController.showAlertWithOk(
-				title: .localized("Bad Password"),
-				message: .localized("Please check the password and try again.")
-			)
-			return
-		}
+	private func _cellButton(for cert: CertificatePair, at index: Int) -> some View {
+		let cornerRadius = {
+			if #available(iOS 26.0, *) {
+				28.0
+			} else {
+				10.5
+			}
+		}()
 		
-		FR.handleCertificateFiles(
-			p12URL: p12URL,
-			provisionURL: provisionURL,
-			p12Password: _p12Password,
-			certificateName: _certificateName
-		) { _ in
-			dismiss()
+		Button {
+			_selectedCertBinding.wrappedValue = index
+		} label: {
+			CertificatesCellView(
+				cert: cert
+			)
+			.padding()
+			.background(
+				RoundedRectangle(cornerRadius: cornerRadius)
+					.fill(Color(uiColor: .quaternarySystemFill))
+			)
+			.overlay(
+				RoundedRectangle(cornerRadius: cornerRadius)
+					.strokeBorder(
+						_selectedCertBinding.wrappedValue == index ? Color.accentColor : Color.clear,
+						lineWidth: 2
+					)
+			)
+			.contextMenu {
+				_contextActions(for: cert)
+				if cert.isDefault != true {
+					Divider()
+					_actions(for: cert)
+				}
+			}
+			.transaction {
+				$0.animation = nil
+			}
+		}
+		.buttonStyle(.plain)
+	}
+	
+	@ViewBuilder
+	private func _actions(for cert: CertificatePair) -> some View {
+		Button(.localized("Delete"), systemImage: "trash", role: .destructive) {
+			Storage.shared.deleteCertificate(for: cert)
+		}
+	}
+	
+	@ViewBuilder
+	private func _contextActions(for cert: CertificatePair) -> some View {
+		Button(.localized("Get Info"), systemImage: "info.circle") {
+			_isSelectedInfoPresenting = cert
+		}
+		Button(.localized("Change Nickname"), systemImage: "pencil") {
+			_newNickname = cert.nickname ?? ""
+			_certToRename = cert
+			_isRenamingPresenting = true
+		}
+		Divider()
+		Button(.localized("Check Revokage"), systemImage: "person.text.rectangle") {
+			Storage.shared.revokagedCertificate(for: cert)
 		}
 	}
 }
