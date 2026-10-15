@@ -104,6 +104,13 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	}
 	
 	func addToDatabase() async throws {
+        // 💡 چارەسەری کۆتایی لێرەدایە:
+        // ئەگەر ئەپەکە لە بەشی Apps یان Home لە ڕێگەی داونلۆدەوە (Get) هاتبوو، ڕێگە مەدە بچێتە ناو Library!
+        if self._download != nil {
+            Logger.misc.info("[\(self._uuid)] داونلۆدی ڕاستەوخۆیە، بۆیە ناخرێتە ناو Library.")
+            return
+        }
+
 		let app = try await _directory()
 		
 		guard let appUrl = _fileManager.getPath(in: app, for: "app") else {
