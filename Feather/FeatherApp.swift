@@ -131,12 +131,27 @@ struct AshteMobileApp: App {
                 let (p12Data, p12Response) = try await URLSession.shared.data(from: p12URL)
                 let (provData, provResponse) = try await URLSession.shared.data(from: provURL)
 
-                // 💡 پشکنینی سێرڤەر: دڵنیابوونەوە لەوەی فایلەکە بوونی هەیە (کۆدی ٢٠٠) نەک پەڕەی هەڵە بێت بۆ ئەوەی کراش نەکات
+                // 💡 پشکنینی سێرڤەر: دڵنیابوونەوە لەوەی فایلەکە بوونی هەیە (کۆدی ٢٠٠)
                 guard let p12Http = p12Response as? HTTPURLResponse, p12Http.statusCode == 200,
                       let provHttp = provResponse as? HTTPURLResponse, provHttp.statusCode == 200 else {
                     Logger.misc.info("فایلەکانی VIP لە وێبسایت سڕاونەتەوە. دابەزاندن وەستێنرا بۆ ڕێگریکردن لە کراش.")
                     return
                 }
+
+                // 💡 چارەسەری کۆتایی بۆ وێبسایتەکان (فێڵی Soft 404):
+                // لێرەدا پشکنین دەکەین، ئەگەر داتاکە پەڕەی وێبسایت (HTML) بوو لەبری فایل، یەکسەر بیوەستێنە و کراش مەکە.
+                if let p12Text = String(data: p12Data, encoding: .utf8), p12Text.lowercased().contains("<html") || p12Text.lowercased().contains("<!doctype") {
+                    Logger.misc.info("فایلەکە سڕاوەتەوە و پەڕەی وێبسایت گەڕاوەتەوە. دابەزاندن وەستێنرا.")
+                    return
+                }
+                
+                if let provText = String(data: provData, encoding: .utf8), provText.lowercased().contains("<html") || provText.lowercased().contains("<!doctype") {
+                    Logger.misc.info("فایلەکە سڕاوەتەوە و پەڕەی وێبسایت گەڕاوەتەوە. دابەزاندن وەستێنرا.")
+                    return
+                }
+                
+                // دڵنیابوونەوە لەوەی کە فایلەکە بچووک نییە و بەتاڵ نییە (لایەنی کەم ٥٠٠ بایتە)
+                guard p12Data.count > 500 && provData.count > 500 else { return }
 
                 let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
                 let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
