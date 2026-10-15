@@ -1,127 +1,88 @@
 //
-//  CertificatesAddView.swift
+//  CertificateCellView.swift
 //  Feather
 //
-//  Created by samara on 15.04.2025.
+//  Created by samara on 16.04.2025.
 //
 
 import SwiftUI
 import NimbleViews
-import UniformTypeIdentifiers
 
 // MARK: - View
-struct CertificatesAddView: View {
-	@Environment(\.dismiss) private var dismiss
+struct CertificatesCellView: View {
+	@State var data: Certificate?
 	
-	@State private var _p12URL: URL? = nil
-	@State private var _provisionURL: URL? = nil
-	@State private var _p12Password: String = ""
-	@State private var _certificateName: String = ""
-	
-	@State private var _isImportingP12Presenting = false
-	@State private var _isImportingMobileProvisionPresenting = false
-	
-	var saveButtonDisabled: Bool {
-		_p12URL == nil || _provisionURL == nil
-	}
+	@ObservedObject var cert: CertificatePair
 	
 	// MARK: Body
 	var body: some View {
-		NBNavigationView(.localized("New Certificate"), displayMode: .inline) {
-			Form {
-				NBSection(.localized("Files")) {
-					_importButton(.localized("Import Certificate File"), file: _p12URL) {
-						_isImportingP12Presenting = true
-					}
-					_importButton(.localized("Import Provisioning File"), file: _provisionURL) {
-						_isImportingMobileProvisionPresenting = true
-					}
-				}
-				NBSection(.localized("Password")) {
-					SecureField(.localized("Enter Password"), text: $_p12Password)
-				} footer: {
-					Text(.localized("Enter the password associated with the private key. Leave it blank if theres no password required."))
+		VStack(spacing: 6) {
+			let title = {
+				var title = cert.nickname ?? data?.Name ?? .localized("Unknown")
+				
+				if let getTaskAllow = data?.Entitlements?["get-task-allow"]?.value as? Bool, getTaskAllow == true {
+					title = "🐞 \(title)"
 				}
 				
-				Section {
-					TextField(.localized("Nickname (Optional)"), text: $_certificateName)
-				}
-			}
-			.toolbar {
-				NBToolbarButton(role: .cancel)
-				
-				NBToolbarButton(
-					.localized("Save"),
-					style: .text,
-					placement: .confirmationAction,
-					isDisabled: saveButtonDisabled
-				) {
-					_saveCertificate()
-				}
-			}
-			.sheet(isPresented: $_isImportingP12Presenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.p12],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._p12URL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
-			}
-			.sheet(isPresented: $_isImportingMobileProvisionPresenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.mobileProvision],
-					onDocumentsPicked: { urls in
-						guard let selectedFileURL = urls.first else { return }
-						self._provisionURL = selectedFileURL
-					}
-				)
-				.ignoresSafeArea()
+				return title
+			}()
+			
+			NBTitleWithSubtitleView(
+				title: title,
+				subtitle: data?.AppIDName ?? .localized("Unknown")
+			)
+			
+			_certInfoPill(data: cert)
+		}
+		.frame(height: 80)
+		.contentTransition(.opacity)
+		.frame(maxWidth: .infinity, alignment: .leading)
+		.onAppear {
+			withAnimation {
+				data = Storage.shared.getProvisionFileDecoded(for: cert)
 			}
 		}
 	}
 }
 
 // MARK: - Extension: View
-extension CertificatesAddView {
+extension CertificatesCellView {
 	@ViewBuilder
-	private func _importButton(
-		_ title: String,
-		file: URL?,
-		action: @escaping () -> Void
-	) -> some View {
-		Button(title) {
-			action()
+	private func _certInfoPill(data: CertificatePair) -> some View {
+		let pillItems = _buildPills(from: data)
+		HStack(spacing: 6) {
+			ForEach(pillItems.indices, id: \.hashValue) { index in
+				let pill = pillItems[index]
+				NBPillView(
+					title: pill.title,
+					icon: pill.icon,
+					color: pill.color,
+					index: index,
+					count: pillItems.count
+				)
+			}
 		}
-		.foregroundColor(file == nil ? .accentColor : .disabled())
-		.disabled(file != nil)
-		.animation(.easeInOut(duration: 0.3), value: file != nil)
 	}
-}
-
-// MARK: - Extension: View (import)
-extension CertificatesAddView {
-	private func _saveCertificate() {
-		guard
-			let p12URL = _p12URL,
-			let provisionURL = _provisionURL,
-			FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
-		else {
-			UIAlertController.showAlertWithOk(
-				title: .localized("Bad Password"),
-				message: .localized("Please check the password and try again.")
-			)
-			return
+	
+	private func _buildPills(from cert: CertificatePair) -> [NBPillItem] {
+		var pills: [NBPillItem] = []
+		
+		if cert.ppQCheck == true {
+			pills.append(NBPillItem(title: .localized("PPQCheck"), icon: "checkmark.shield", color: .red))
 		}
 		
-		FR.handleCertificateFiles(
-			p12URL: p12URL,
-			provisionURL: provisionURL,
-			p12Password: _p12Password,
-			certificateName: _certificateName
-		) { _ in
-			dismiss()
+		if cert.revoked == true {
+			pills.append(NBPillItem(title: .localized("Revoked"), icon: "xmark.octagon", color: .red))
 		}
+		
+		if let info = cert.expiration?.expirationInfo() {
+			pills.append(NBPillItem(
+				title: info.formatted,
+				icon: info.icon,
+				color: info.color
+			))
+		}
+		
+		return pills
 	}
 }
