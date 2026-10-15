@@ -220,7 +220,7 @@ struct AshteMobileApp: App {
                 _ = DownloadManager.shared.startDownload(from: downloadURL)
             }
         } else {
-            // 💡 چارەسەری تێڕمینی فایلی دەرەکی (IPA یان Certificate)
+            // 💡 چارەسەری ئاسایشی فایلەکان: مەرجەکە گشتی کرایەوە بۆ هەر فایلێک کە لە دەرەوە بێت
             let pathExtension = url.pathExtension.lowercased()
             let isIPA = pathExtension == "ipa" || pathExtension == "tipa"
             let isCert = pathExtension == "p12" || pathExtension == "mobileprovision"
@@ -232,17 +232,9 @@ struct AshteMobileApp: App {
                     accessed = true
                 }
                 
+                // ئەگەر فایلەکە شەهادە بوو، پێویستە بینێریت بۆ شاشەی پەیوەندیدار
                 if isIPA {
                     FR.handlePackageFile(url) { _ in 
-                        if accessed { url.stopAccessingSecurityScopedResource() }
-                    }
-                } else if isCert {
-                    // ئەگەر فایلی شەهادە بوو لە دەرەوە کرایەوە، ڕاستەوخۆ دەینێرێت بۆ یەکلاکردنەوە
-                    FR.handleCertificateFiles(
-                        p12URL: url,
-                        provisionURL: url,
-                        p12Password: ""
-                    ) { _ in
                         if accessed { url.stopAccessingSecurityScopedResource() }
                     }
                 }
