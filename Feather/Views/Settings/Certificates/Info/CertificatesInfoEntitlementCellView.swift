@@ -1,6 +1,6 @@
 //
 //  CertificatesInfoEntitlementCellView.swift
-//  Feather
+//  AshteMobile
 //
 //  Created by samara on 27.04.2025.
 //
