@@ -200,17 +200,16 @@ extension CertificatesAddView {
             return
         }
         
-        // وەرگرتنی مۆڵەتی کاتی بۆ خوێندنەوەی فایلەکان
         let p12Access = p12URL.startAccessingSecurityScopedResource()
         let provAccess = provisionURL.startAccessingSecurityScopedResource()
         
-        defer {
-            if p12Access { p12URL.stopAccessingSecurityScopedResource() }
-            if provAccess { provisionURL.stopAccessingSecurityScopedResource() }
-        }
+        // ١. پشکنینی سەرەتایی بۆ پاسۆردەکە
+        let isValid = FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
         
-        // پشکنینی پاسۆرد لەسەر فایلە ڕەسەنەکان پێش پرۆسەکە
-        guard FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL) else {
+        if p12Access { p12URL.stopAccessingSecurityScopedResource() }
+        if provAccess { provisionURL.stopAccessingSecurityScopedResource() }
+        
+        guard isValid else {
             UIAlertController.showAlertWithOk(
                 title: .localized("Bad Password"),
                 message: .localized("Please check the password and try again.")
@@ -219,7 +218,7 @@ extension CertificatesAddView {
         }
         
         do {
-            // خوێندنی داتای فایلەکان و گواستنەوەیان بۆ فۆڵدەری کاتی (Temporary Directory)
+            // ٢. خوێندنی داتای فایلەکان بۆ ناو ممۆری و دروستکردنی فایلی کاتی
             let p12Data = try Data(contentsOf: p12URL)
             let provData = try Data(contentsOf: provisionURL)
             
@@ -232,11 +231,11 @@ extension CertificatesAddView {
             let certName = _certificateName
             let password = _p12Password
             
-            // یەکەمجار شاشەکە بە بێ هیچ کێشەیەک دادەخەین
+            // ٣. داخستنی یەکجارەکی شاشەکە ڕاستەوخۆ پێش دەستپێکردنی پرۆسەی داتابەیس
             dismiss()
             
-            // پاشان لە پشتەوە بە داتای کاتی پرۆسەکە ئەنجام دەدەین
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            // ٤. ئەنجامدانی پرۆسەی سەیڤکردن لە دەرەوەی شاشەکە بە تەواوی
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 FR.handleCertificateFiles(
                     p12URL: tempP12,
                     provisionURL: tempProv,
