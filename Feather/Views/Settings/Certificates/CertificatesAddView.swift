@@ -195,21 +195,9 @@ extension CertificatesAddView {
     private func _saveCertificate() {
         guard
             let p12URL = _p12URL,
-            let provisionURL = _provisionURL
+            let provisionURL = _provisionURL,
+            FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
         else {
-            return
-        }
-        
-        let p12Access = p12URL.startAccessingSecurityScopedResource()
-        let provAccess = provisionURL.startAccessingSecurityScopedResource()
-        
-        // ١. پشکنینی سەرەتایی بۆ پاسۆردەکە
-        let isValid = FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
-        
-        if p12Access { p12URL.stopAccessingSecurityScopedResource() }
-        if provAccess { provisionURL.stopAccessingSecurityScopedResource() }
-        
-        guard isValid else {
             UIAlertController.showAlertWithOk(
                 title: .localized("Bad Password"),
                 message: .localized("Please check the password and try again.")
@@ -217,41 +205,13 @@ extension CertificatesAddView {
             return
         }
         
-        do {
-            // ٢. خوێندنی داتای فایلەکان بۆ ناو ممۆری و دروستکردنی فایلی کاتی
-            let p12Data = try Data(contentsOf: p12URL)
-            let provData = try Data(contentsOf: provisionURL)
-            
-            let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".p12")
-            let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mobileprovision")
-            
-            try p12Data.write(to: tempP12)
-            try provData.write(to: tempProv)
-            
-            let certName = _certificateName
-            let password = _p12Password
-            
-            // ٣. داخستنی یەکجارەکی شاشەکە ڕاستەوخۆ پێش دەستپێکردنی پرۆسەی داتابەیس
+        FR.handleCertificateFiles(
+            p12URL: p12URL,
+            provisionURL: provisionURL,
+            p12Password: _p12Password,
+            certificateName: _certificateName
+        ) { _ in
             dismiss()
-            
-            // ٤. ئەنجامدانی پرۆسەی سەیڤکردن لە دەرەوەی شاشەکە بە تەواوی
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                FR.handleCertificateFiles(
-                    p12URL: tempP12,
-                    provisionURL: tempProv,
-                    p12Password: password,
-                    certificateName: certName
-                ) { _ in
-                    try? FileManager.default.removeItem(at: tempP12)
-                    try? FileManager.default.removeItem(at: tempProv)
-                }
-            }
-            
-        } catch {
-            UIAlertController.showAlertWithOk(
-                title: .localized("Error"),
-                message: error.localizedDescription
-            )
         }
     }
 }
