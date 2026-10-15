@@ -195,9 +195,19 @@ extension CertificatesAddView {
     private func _saveCertificate() {
         guard
             let p12URL = _p12URL,
-            let provisionURL = _provisionURL,
-            FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL)
+            let provisionURL = _provisionURL
         else {
+            return
+        }
+        
+        // 💡 وەرگرتنی مۆڵەتی ئەمنی بۆ فایلە هەڵبژێردراوەکانی دەستی بۆ ڕێگریکردن لە کراش
+        let p12Access = p12URL.startAccessingSecurityScopedResource()
+        let provAccess = provisionURL.startAccessingSecurityScopedResource()
+        
+        guard FR.checkPasswordForCertificate(for: p12URL, with: _p12Password, using: provisionURL) else {
+            if p12Access { p12URL.stopAccessingSecurityScopedResource() }
+            if provAccess { provisionURL.stopAccessingSecurityScopedResource() }
+            
             UIAlertController.showAlertWithOk(
                 title: .localized("Bad Password"),
                 message: .localized("Please check the password and try again.")
@@ -211,7 +221,13 @@ extension CertificatesAddView {
             p12Password: _p12Password,
             certificateName: _certificateName
         ) { _ in
-            dismiss()
+            if p12Access { p12URL.stopAccessingSecurityScopedResource() }
+            if provAccess { provisionURL.stopAccessingSecurityScopedResource() }
+            
+            // 💡 داخستنی شاشەکە لەسەر Main Thread بە سەلامەتی پاش سەیڤبوونی فایلەکان
+            DispatchQueue.main.async {
+                dismiss()
+            }
         }
     }
 }
