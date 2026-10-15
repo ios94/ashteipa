@@ -1,9 +1,8 @@
 //
-//  AshteMobileApp.swift
-//  AshteMobile
+//  FeatherApp.swift
+//  Feather
 //
 //  Created by samara on 10.04.2025.
-//  Safe Onboarding Integrated & Strict VPN Detection ⚡️
 //
 
 import SwiftUI
@@ -12,308 +11,245 @@ import IDeviceSwift
 import OSLog
 
 @main
-struct AshteMobileApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
-    let heartbeat = HeartbeatManager.shared
-    
-    @StateObject var downloadManager = DownloadManager.shared
-    let storage = Storage.shared
-    
-    @StateObject private var networkMonitor = NetworkMonitor()
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
-    @State private var isCheckingNetwork = true
-    
-    private var showOnboardingBinding: Binding<Bool> {
-        Binding<Bool>(
-            get: { !hasCompletedOnboarding },
-            set: { newValue in hasCompletedOnboarding = !newValue }
-        )
-    }
-    
-    var body: some Scene {
-        WindowGroup {
-            Group {
-                if networkMonitor.isProxied {
-                    ProxyDetectionView(monitor: networkMonitor)
-                } else if isCheckingNetwork {
-                    Color.clear
-                        .ignoresSafeArea()
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                isCheckingNetwork = false
-                            }
-                        }
-                } else {
-                    VStack {
-                        DownloadHeaderView(downloadManager: downloadManager)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        VariedTabbarView()
-                            .environment(\.managedObjectContext, storage.context)
-                            .onOpenURL(perform: _handleURL)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    .animation(.smooth, value: downloadManager.manualDownloads.description)
-                    .fullScreenCover(isPresented: showOnboardingBinding) {
-                        Group {
-                            if #available(iOS 17.0, *) {
-                                OnboardingView()
-                            } else {
-                                OnboardingViewLegacy()
-                            }
-                        }
-                    }
-                    .onAppear {
-                        if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "AshteMobile.userInterfaceStyle")) {
-                            UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
-                        }
-                        
-                        UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
-                        
-                        if hasCompletedOnboarding {
-                            _downloadAndInstallVIPCert()
-                        }
-                    }
-                    .onChange(of: hasCompletedOnboarding) { completed in
-                        if completed {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                _downloadAndInstallVIPCert()
-                            }
-                        }
-                    }
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                networkMonitor.checkProxyAndVPN()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
-                DispatchQueue.main.async {
-                    UIAlertController.showAlertWithOk(
-                        title: "InvalidHostID",
-                        message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
-                    )
-                }
-            }
-        }
-    }
-    
-    private func _downloadAndInstallVIPCert() {
-        guard UserDefaults.standard.bool(forKey: "AshteVIPCertInstalled") == false else { return }
-
-        guard !self.networkMonitor.isProxied else {
-            Logger.misc.info("VPN Detected. Certificate download aborted to prevent traffic capture.")
-            return
-        }
-        
-        let p12URLString = "https://ashtemobile.site/cert.p12"
-        let provURLString = "https://ashtemobile.site/cert.mobileprovision"
-
-        guard let p12URL = URL(string: p12URLString),
-              let provURL = URL(string: provURLString) else { return }
-
-        Task {
-            do {
-                let (p12Data, _) = try await URLSession.shared.data(from: p12URL)
-                let (provData, _) = try await URLSession.shared.data(from: provURL)
-
-                let tempP12 = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.p12")
-                let tempProv = FileManager.default.temporaryDirectory.appendingPathComponent("vip_cert.mobileprovision")
-
-                try p12Data.write(to: tempP12)
-                try provData.write(to: tempProv)
-                
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-
-                DispatchQueue.main.async {
-                    FR.handleCertificateFiles(
-                        p12URL: tempP12,
-                        provisionURL: tempProv,
-                        p12Password: "@ashtemobile",
-                        certificateName: "AshteMobile",
-                        isDefault: true
-                    ) { error in
-                        if error == nil {
-                            UserDefaults.standard.set(true, forKey: "AshteVIPCertInstalled")
-                            Logger.misc.info("بڕوانامەی VIP بە سەرکەوتوویی دابەزی!")
-                        }
-                    }
-                }
-            } catch {
-                Logger.misc.error("هەڵە لە هێنانی بڕوانامەکە: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    private func _handleURL(_ url: URL) {
-        if url.scheme == "ashte" {
-            if url.host == "import-certificate" {
-                guard
-                    let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                    let queryItems = components.queryItems
-                else { return }
-                
-                func queryValue(_ name: String) -> String? {
-                    queryItems.first(where: { $0.name == name })?.value?.removingPercentEncoding
-                }
-                
-                guard
-                    let p12Base64 = queryValue("p12"),
-                    let provisionBase64 = queryValue("mobileprovision"),
-                    let passwordBase64 = queryValue("password"),
-                    let passwordData = Data(base64Encoded: passwordBase64),
-                    let password = String(data: passwordData, encoding: .utf8)
-                else { return }
-                
-                let generator = UINotificationFeedbackGenerator()
-                generator.prepare()
-                
-                guard
-                    let p12URL = FileManager.default.decodeAndWrite(base64: p12Base64, pathComponent: ".p12"),
-                    let provisionURL = FileManager.default.decodeAndWrite(base64: provisionBase64, pathComponent: ".mobileprovision"),
-                    FR.checkPasswordForCertificate(for: p12URL, with: password, using: provisionURL)
-                else {
-                    generator.notificationOccurred(.error)
-                    return
-                }
-                
-                FR.handleCertificateFiles(
-                    p12URL: p12URL,
-                    provisionURL: provisionURL,
-                    p12Password: password
-                ) { error in
-                    if let error = error {
-                        UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
-                    } else {
-                        generator.notificationOccurred(.success)
-                    }
-                }
-                return
-            }
-            if url.host == "export-certificate" {
-                guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-                let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
-                guard let callbackTemplate = queryItems["callback_template"]?.removingPercentEncoding else { return }
-                FR.exportCertificateAndOpenUrl(using: callbackTemplate)
-            }
-            if let fullPath = url.validatedScheme(after: "/source/") {
-                FR.handleSource(fullPath) { }
-            }
-            if let fullPath = url.validatedScheme(after: "/install/"), let downloadURL = URL(string: fullPath) {
-                _ = DownloadManager.shared.startDownload(from: downloadURL)
-            }
-        } else {
-            let pathExtension = url.pathExtension.lowercased()
-            let isIPA = pathExtension == "ipa" || pathExtension == "tipa"
-            let isCert = pathExtension == "p12" || pathExtension == "mobileprovision"
-            
-            if isIPA || isCert {
-                var accessed = false
-                if FileManager.default.isFileFromFileProvider(at: url) {
-                    guard url.startAccessingSecurityScopedResource() else { return }
-                    accessed = true
-                }
-                
-                if isIPA {
-                    FR.handlePackageFile(url) { _ in 
-                        if accessed { url.stopAccessingSecurityScopedResource() }
-                    }
-                } else if isCert {
-                    FR.handleCertificateFiles(
-                        p12URL: url,
-                        provisionURL: url,
-                        p12Password: ""
-                    ) { _ in
-                        if accessed { url.stopAccessingSecurityScopedResource() }
-                    }
-                }
-                return
-            }
-        }
-    }
+struct FeatherApp: App {
+	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+	
+	let heartbeat = HeartbeatManager.shared
+	
+	@StateObject var downloadManager = DownloadManager.shared
+	let storage = Storage.shared
+	
+	var body: some Scene {
+		WindowGroup {
+			VStack {
+				DownloadHeaderView(downloadManager: downloadManager)
+					.transition(.move(edge: .top).combined(with: .opacity))
+				VariedTabbarView()
+					.environment(\.managedObjectContext, storage.context)
+					.onOpenURL(perform: _handleURL)
+					.transition(.move(edge: .top).combined(with: .opacity))
+			}
+			.animation(.smooth, value: downloadManager.manualDownloads.description)
+			.onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
+				DispatchQueue.main.async {
+					UIAlertController.showAlertWithOk(
+						title: "InvalidHostID",
+						message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
+					)
+				}
+			}
+			// dear god help me
+			.onAppear {
+				if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")) {
+					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
+				}
+				
+				UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "Feather.userTintColor") ?? "#848ef9"))
+			}
+		}
+	}
+	
+	private func _handleURL(_ url: URL) {
+		if url.scheme == "feather" {
+			/// feather://import-certificate?p12=<base64>&mobileprovision=<base64>&password=<base64>
+			if url.host == "import-certificate" {
+				guard
+					let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+					let queryItems = components.queryItems
+				else {
+					return
+				}
+				
+				func queryValue(_ name: String) -> String? {
+					queryItems.first(where: { $0.name == name })?.value?.removingPercentEncoding
+				}
+				
+				guard
+					let p12Base64 = queryValue("p12"),
+					let provisionBase64 = queryValue("mobileprovision"),
+					let passwordBase64 = queryValue("password"),
+					let passwordData = Data(base64Encoded: passwordBase64),
+					let password = String(data: passwordData, encoding: .utf8)
+				else {
+					return
+				}
+				
+				let generator = UINotificationFeedbackGenerator()
+				generator.prepare()
+				
+				guard
+					let p12URL = FileManager.default.decodeAndWrite(base64: p12Base64, pathComponent: ".p12"),
+					let provisionURL = FileManager.default.decodeAndWrite(base64: provisionBase64, pathComponent: ".mobileprovision"),
+					FR.checkPasswordForCertificate(for: p12URL, with: password, using: provisionURL)
+				else {
+					generator.notificationOccurred(.error)
+					return
+				}
+				
+				FR.handleCertificateFiles(
+					p12URL: p12URL,
+					provisionURL: provisionURL,
+					p12Password: password
+				) { error in
+					if let error = error {
+						UIAlertController.showAlertWithOk(title: .localized("Error"), message: error.localizedDescription)
+					} else {
+						generator.notificationOccurred(.success)
+					}
+				}
+				
+				return
+			}
+			/// feather://export-certificate?callback_template=<template>
+			/// ?callback_template=: This is how we callback to the application requesting the certificate, this will be a url scheme
+			/// 	example: livecontainer%3A%2F%2Fcertificate%3Fcert%3D%24%28BASE64_CERT%29%26password%3D%24%28PASSWORD%29
+			/// 	decoded: livecontainer://certificate?cert=$(BASE64_CERT)&password=$(PASSWORD)
+			/// $(BASE64_CERT) and $(PASSWORD) must be presenting in the callback template so we can replace them with the proper content
+			if url.host == "export-certificate" {
+				guard
+					let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+				else {
+					return
+				}
+				
+				let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
+				guard let callbackTemplate = queryItems["callback_template"]?.removingPercentEncoding else { return }
+				
+				FR.exportCertificateAndOpenUrl(using: callbackTemplate)
+			}
+			/// feather://source/<url>
+			if let fullPath = url.validatedScheme(after: "/source/") {
+				FR.handleSource(fullPath) { }
+			}
+			/// feather://install/<url.ipa>
+			if
+				let fullPath = url.validatedScheme(after: "/install/"),
+				let downloadURL = URL(string: fullPath)
+			{
+				UIAlertController.showAlertWithCancel(
+					title: .localized("Install"),
+					message: .localized("Do you want to download and install this file?") + "\n\n\(downloadURL)",
+					actions: [
+						UIAlertAction(title: .localized("Install"), style: .default) { _ in
+							_ = DownloadManager.shared.startDownload(from: downloadURL)
+						}
+					]
+				)
+			}
+		} else {
+			if url.pathExtension == "ipa" || url.pathExtension == "tipa" {
+				if FileManager.default.isFileFromFileProvider(at: url) {
+					guard url.startAccessingSecurityScopedResource() else { return }
+					FR.handlePackageFile(url) { _ in }
+				} else {
+					FR.handlePackageFile(url) { _ in }
+				}
+				
+				return
+			}
+		}
+	}
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        _createPipeline()
-        _createDocumentsDirectories()
-        ResetView.clearWorkCache()
-        _addDefaultCertificates()
-        return true
-    }
-    
-    private func _createPipeline() {
-        DataLoader.sharedUrlCache.diskCapacity = 0
-        let pipeline = ImagePipeline {
-            let dataLoader: DataLoader = {
-                let config = URLSessionConfiguration.default
-                config.urlCache = nil
-                return DataLoader(configuration: config)
-            }()
-            let dataCache = try? DataCache(name: "ashtemobile.datacache")
-            let imageCache = Nuke.ImageCache()
-            dataCache?.sizeLimit = 500 * 1024 * 1024
-            imageCache.costLimit = 100 * 1024 * 1024
-            $0.dataCache = dataCache
-            $0.imageCache = imageCache
-            $0.dataLoader = dataLoader
-            $0.dataCachePolicy = .automatic
-            $0.isStoringPreviewsInMemoryCache = false
-        }
-        ImagePipeline.shared = pipeline
-    }
-    
-    private func _createDocumentsDirectories() {
-        let fileManager = FileManager.default
-        let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
-        for url in directories {
-            try? fileManager.createDirectoryIfNeeded(at: url)
-        }
-    }
-    
-    private func _addDefaultCertificates() {
-        guard
-            UserDefaults.standard.bool(forKey: "ashtemobile.didImportDefaultCertificates") == false,
-            let signingAssetsURL = Bundle.main.url(forResource: "signing-assets", withExtension: nil)
-        else {
-            return
-        }
-        
-        do {
-            let folderContents = try FileManager.default.contentsOfDirectory(
-                at: signingAssetsURL,
-                includingPropertiesForKeys: nil,
-                options: .skipsHiddenFiles
-            )
-            
-            for folderURL in folderContents {
-                guard folderURL.hasDirectoryPath else { continue }
-                
-                let certName = folderURL.lastPathComponent
-                let p12Url = folderURL.appendingPathComponent("cert.p12")
-                let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision")
-                let passwordUrl = folderURL.appendingPathComponent("cert.txt")
-                
-                guard
-                    FileManager.default.fileExists(atPath: p12Url.path),
-                    FileManager.default.fileExists(atPath: provisionUrl.path),
-                    FileManager.default.fileExists(atPath: passwordUrl.path)
-                else {
-                    continue
-                }
-                
-                let password = (try? String(contentsOf: passwordUrl, encoding: .utf8)) ?? ""
-                
-                FR.handleCertificateFiles(
-                    p12URL: p12Url,
-                    provisionURL: provisionUrl,
-                    p12Password: password,
-                    certificateName: certName,
-                    isDefault: true
-                ) { _ in }
-            }
-            UserDefaults.standard.set(true, forKey: "ashtemobile.didImportDefaultCertificates")
-        } catch {
-            Logger.misc.error("Failed to list signing-assets: \(error)")
-        }
-    }
+	func application(
+		_ application: UIApplication,
+		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+	) -> Bool {
+		_createPipeline()
+		_createDocumentsDirectories()
+		ResetView.clearWorkCache()
+		_addDefaultCertificates()
+		return true
+	}
+	
+	private func _createPipeline() {
+		DataLoader.sharedUrlCache.diskCapacity = 0
+		
+		let pipeline = ImagePipeline {
+			let dataLoader: DataLoader = {
+				let config = URLSessionConfiguration.default
+				config.urlCache = nil
+				return DataLoader(configuration: config)
+			}()
+			let dataCache = try? DataCache(name: "thewonderofyou.Feather.datacache") // disk cache
+			let imageCache = Nuke.ImageCache() // memory cache
+			dataCache?.sizeLimit = 500 * 1024 * 1024
+			imageCache.costLimit = 100 * 1024 * 1024
+			$0.dataCache = dataCache
+			$0.imageCache = imageCache
+			$0.dataLoader = dataLoader
+			$0.dataCachePolicy = .automatic
+			$0.isStoringPreviewsInMemoryCache = false
+		}
+		
+		ImagePipeline.shared = pipeline
+	}
+	
+	private func _createDocumentsDirectories() {
+		let fileManager = FileManager.default
+
+		let directories: [URL] = [
+			fileManager.archives,
+			fileManager.certificates,
+			fileManager.signed,
+			fileManager.unsigned
+		]
+		
+		for url in directories {
+			try? fileManager.createDirectoryIfNeeded(at: url)
+		}
+	}
+	
+	private func _addDefaultCertificates() {
+		guard
+			UserDefaults.standard.bool(forKey: "feather.didImportDefaultCertificates") == false,
+			let signingAssetsURL = Bundle.main.url(forResource: "signing-assets", withExtension: nil)
+		else {
+			return
+		}
+		
+		do {
+			let folderContents = try FileManager.default.contentsOfDirectory(
+				at: signingAssetsURL,
+				includingPropertiesForKeys: nil,
+				options: .skipsHiddenFiles
+			)
+			
+			for folderURL in folderContents {
+				guard folderURL.hasDirectoryPath else { continue }
+				
+				let certName = folderURL.lastPathComponent
+				
+				let p12Url = folderURL.appendingPathComponent("cert.p12")
+				let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision")
+				let passwordUrl = folderURL.appendingPathComponent("cert.txt")
+				
+				guard
+					FileManager.default.fileExists(atPath: p12Url.path),
+					FileManager.default.fileExists(atPath: provisionUrl.path),
+					FileManager.default.fileExists(atPath: passwordUrl.path)
+				else {
+					Logger.misc.warning("Skipping \(certName): missing required files")
+					continue
+				}
+				
+				let password = try String(contentsOf: passwordUrl, encoding: .utf8)
+				
+				FR.handleCertificateFiles(
+					p12URL: p12Url,
+					provisionURL: provisionUrl,
+					p12Password: password,
+					certificateName: certName,
+					isDefault: true
+				) { _ in
+					
+				}
+			}
+			UserDefaults.standard.set(true, forKey: "feather.didImportDefaultCertificates")
+		} catch {
+			Logger.misc.error("Failed to list signing-assets: \(error)")
+		}
+	}
+
 }
