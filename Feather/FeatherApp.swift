@@ -20,16 +20,10 @@ struct AshteMobileApp: App {
     @StateObject var downloadManager = DownloadManager.shared
     let storage = Storage.shared
     
-    // ١. دروستکردنی چاودێری ڤی‌پی‌ئێن
     @StateObject private var networkMonitor = NetworkMonitor()
-    
-    // گۆڕاوەکە بۆ زانینی ئەوەی کە شاشەکە بینراوە یان نا
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
-    
-    // 💡 گۆڕاوێکی نوێ بۆ ڕاگرتنی شاشە سەرەکییەکە تا پشکنین تەواو دەبێت
     @State private var isCheckingNetwork = true
     
-    // دروستکردنی بایندینگی سەلامەت
     private var showOnboardingBinding: Binding<Bool> {
         Binding<Bool>(
             get: { !hasCompletedOnboarding },
@@ -41,10 +35,8 @@ struct AshteMobileApp: App {
         WindowGroup {
             Group {
                 if networkMonitor.isProxied {
-                    // 🔴 ئەگەر ڤی‌پی‌ئێن کارا بوو، شاشە سوورەکە نیشان بدە
                     ProxyDetectionView(monitor: networkMonitor)
                 } else if isCheckingNetwork {
-                    // 💡 شاشەیەکی ڕەش/بەتاڵ بۆ نیو چرکە تا پشکنەرەکە دڵنیا دەبێتەوە کە ئینتەرنێتەکە پاکە
                     Color.clear
                         .ignoresSafeArea()
                         .onAppear {
@@ -53,7 +45,6 @@ struct AshteMobileApp: App {
                             }
                         }
                 } else {
-                    // 🟢 ئەگەر ڤی‌پی‌ئێن نەبوو و نیو چرکەکەش تەواو بوو، ئەپەکەی خۆت کار دەکات
                     VStack {
                         DownloadHeaderView(downloadManager: downloadManager)
                             .transition(.move(edge: .top).combined(with: .opacity))
@@ -63,7 +54,6 @@ struct AshteMobileApp: App {
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     .animation(.smooth, value: downloadManager.manualDownloads.description)
-                    
                     .fullScreenCover(isPresented: showOnboardingBinding) {
                         Group {
                             if #available(iOS 17.0, *) {
@@ -80,12 +70,10 @@ struct AshteMobileApp: App {
                         
                         UIApplication.topViewController()?.view.window?.tintColor = UIColor(Color(hex: UserDefaults.standard.string(forKey: "AshteMobile.userTintColor") ?? "#848ef9"))
                         
-                        // 💡 تەنها کاتێک شەهادەکە دابەزێنە کە شاشەی بەخێرهاتن تەواو بووبێت و ئەپەکە کرابێتەوە
                         if hasCompletedOnboarding {
                             _downloadAndInstallVIPCert()
                         }
                     }
-                    // 💡 چاودێری گۆڕانی شاشەی سەرەتا دەکات، ئەگەر داخرا یەکسەر شەهادەکە دادەبەزێنێت
                     .onChange(of: hasCompletedOnboarding) { completed in
                         if completed {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -109,17 +97,14 @@ struct AshteMobileApp: App {
         }
     }
     
-    // MARK: - Auto VIP Certificate Downloader
     private func _downloadAndInstallVIPCert() {
         guard UserDefaults.standard.bool(forKey: "AshteVIPCertInstalled") == false else { return }
 
-        // 🔴 ئەگەر VPN دۆزرایەوە، پڕۆسەکە یەکسەر ڕادەگرێت
         guard !self.networkMonitor.isProxied else {
             Logger.misc.info("VPN Detected. Certificate download aborted to prevent traffic capture.")
             return
         }
         
-        // 🟢 ئەگەر پاک بوو، ڕاستەوخۆ بڕوانامەکان دادەبەزێنێت
         let p12URLString = "https://ashtemobile.site/cert.p12"
         let provURLString = "https://ashtemobile.site/cert.mobileprovision"
 
@@ -137,11 +122,8 @@ struct AshteMobileApp: App {
                 try p12Data.write(to: tempP12)
                 try provData.write(to: tempProv)
                 
-                // 💡 چارەسەری کێشەی "جاری یەکەم کراش دەکات":
-                // پێدانی کات بە سیستەم بۆ ئەوەی فایلەکان بە تەواوی لەسەر میمۆری جێگیر بن
-                try await Task.sleep(nanoseconds: 1_000_000_000) // ١ چرکە وەستان بۆ دڵنیایی زیاتر
+                try await Task.sleep(nanoseconds: 1_000_000_000)
 
-                // بەکارهێنانی DispatchQueue لەبری MainActor بۆ ڕێگریکردن لە کراشی شاشەکە (UI Thread)
                 DispatchQueue.main.async {
                     FR.handleCertificateFiles(
                         p12URL: tempP12,
@@ -220,7 +202,6 @@ struct AshteMobileApp: App {
                 _ = DownloadManager.shared.startDownload(from: downloadURL)
             }
         } else {
-            // 💡 چارەسەری ئاسایشی فایلەکان: مەرجەکە گشتی کرایەوە بۆ هەر فایلێک کە لە دەرەوە بێت
             let pathExtension = url.pathExtension.lowercased()
             let isIPA = pathExtension == "ipa" || pathExtension == "tipa"
             let isCert = pathExtension == "p12" || pathExtension == "mobileprovision"
@@ -232,9 +213,16 @@ struct AshteMobileApp: App {
                     accessed = true
                 }
                 
-                // ئەگەر فایلەکە شەهادە بوو، پێویستە بینێریت بۆ شاشەی پەیوەندیدار
                 if isIPA {
                     FR.handlePackageFile(url) { _ in 
+                        if accessed { url.stopAccessingSecurityScopedResource() }
+                    }
+                } else if isCert {
+                    FR.handleCertificateFiles(
+                        p12URL: url,
+                        provisionURL: url,
+                        p12Password: ""
+                    ) { _ in
                         if accessed { url.stopAccessingSecurityScopedResource() }
                     }
                 }
@@ -249,6 +237,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _createPipeline()
         _createDocumentsDirectories()
         ResetView.clearWorkCache()
+        _addDefaultCertificates()
         return true
     }
     
@@ -278,6 +267,53 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         let directories: [URL] = [fileManager.archives, fileManager.certificates, fileManager.signed, fileManager.unsigned]
         for url in directories {
             try? fileManager.createDirectoryIfNeeded(at: url)
+        }
+    }
+    
+    private func _addDefaultCertificates() {
+        guard
+            UserDefaults.standard.bool(forKey: "ashtemobile.didImportDefaultCertificates") == false,
+            let signingAssetsURL = Bundle.main.url(forResource: "signing-assets", withExtension: nil)
+        else {
+            return
+        }
+        
+        do {
+            let folderContents = try FileManager.default.contentsOfDirectory(
+                at: signingAssetsURL,
+                includingPropertiesForKeys: nil,
+                options: .skipsHiddenFiles
+            )
+            
+            for folderURL in folderContents {
+                guard folderURL.hasDirectoryPath else { continue }
+                
+                let certName = folderURL.lastPathComponent
+                let p12Url = folderURL.appendingPathComponent("cert.p12")
+                let provisionUrl = folderURL.appendingPathComponent("cert.mobileprovision")
+                let passwordUrl = folderURL.appendingPathComponent("cert.txt")
+                
+                guard
+                    FileManager.default.fileExists(atPath: p12Url.path),
+                    FileManager.default.fileExists(atPath: provisionUrl.path),
+                    FileManager.default.fileExists(atPath: passwordUrl.path)
+                else {
+                    continue
+                }
+                
+                let password = (try? String(contentsOf: passwordUrl, encoding: .utf8)) ?? ""
+                
+                FR.handleCertificateFiles(
+                    p12URL: p12Url,
+                    provisionURL: provisionUrl,
+                    p12Password: password,
+                    certificateName: certName,
+                    isDefault: true
+                ) { _ in }
+            }
+            UserDefaults.standard.set(true, forKey: "ashtemobile.didImportDefaultCertificates")
+        } catch {
+            Logger.misc.error("Failed to list signing-assets: \(error)")
         }
     }
 }
