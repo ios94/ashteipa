@@ -10,6 +10,7 @@ import Foundation
 import Zsign
 import UIKit
 import OSLog
+import CoreData
 
 final class SigningHandler: NSObject {
 	private let _fileManager = FileManager.default
@@ -142,10 +143,16 @@ final class SigningHandler: NSObject {
 		}
 		
 		await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            // 💡 چارەسەری کۆتایی بۆ بەشی Signed:
+            // ئەگەر ئەپەکە ڕاستەوخۆ داونلۆد کرابێت (NSManagedObject نەبێت)، ڕێگە نادەین بچێتە ناو Library!
+            guard _app is NSManagedObject else {
+                Logger.signing.info("[\(self._uuid)] داونلۆدی ڕاستەوخۆیە، بۆیە ناخرێتە ناو بەشی Signed.")
+                continuation.resume()
+                return
+            }
+
 			let bundle = Bundle(url: appUrl)
             
-            // 💡 چارەسەری یەکجاری بۆ کێشەی هێنانەوەی ناوی بەرنامەی کۆن!
-            // لێرەدا پشت بە Bundle نابەستین چونکە ئایفۆن کاشی دەکات، بەڵکو ڕاستەوخۆ Info.plist دەخوێنینەوە.
             let infoPlistUrl = appUrl.appendingPathComponent("Info.plist")
             let infoDict = NSDictionary(contentsOf: infoPlistUrl)
 
@@ -166,7 +173,7 @@ final class SigningHandler: NSObject {
 			Storage.shared.addSigned(
 				uuid: _uuid,
 				certificate: _options.signingOption != .default ? nil : appCertificate,
-				appName: finalName,         // 👈 ناوە ڕاستەقینە نوێیەکە دەداتێ
+				appName: finalName,
 				appIdentifier: finalIdentifier,
 				appVersion: finalVersion,
 				appIcon: bundle?.iconFileName
