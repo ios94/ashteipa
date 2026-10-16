@@ -48,7 +48,6 @@ struct AppsView: View {
                         Task {
                             _isRefreshing = true
                             await viewModel.fetchSources(_sources, refresh: true)
-                            // کەمێک چاوەڕێ دەکات بۆ ئەوەی ئەنیمەیشنەکە بە جوانی دەربکەوێت
                             try? await Task.sleep(nanoseconds: 500_000_000)
                             _isRefreshing = false
                         }
@@ -76,7 +75,7 @@ struct AppsView: View {
                         searchText: $_searchText,
                         sortOption: .constant(SourceAppsView.SortOption(rawValue: _sortOptionRawValue) ?? .default),
                         sortAscending: $_sortAscending,
-                        selectedCategory: $_selectedCategory, // 💡 ئەم دێڕە زیاد کرا بۆ بەستنەوەی تابەکان
+                        selectedCategory: $_selectedCategory,
                         onSelect: { self._selectedRoute = $0 }
                     )
                     .ignoresSafeArea()
@@ -105,7 +104,8 @@ struct AppsView: View {
     }
     
     private func _addDefaultSource() {
-        let defaultURLString = "https://github.com/ios94/ashtemobile/raw/refs/heads/main/ashtemobile94.json"
+        // 💡 لینکی ڕەسەنی خۆت کە فایلی ashtemobile94.jsonـی لێیە
+        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
         guard let url = URL(string: defaultURLString) else { return }
         
         let newSource = AltSource(context: context)
