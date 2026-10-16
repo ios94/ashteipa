@@ -20,6 +20,9 @@ struct AppsView: View {
     @State private var _selectedCategory = "All"
     @State private var _selectedRoute: SourceAppsView.SourceAppRoute?
     
+    // 💡 گۆڕاوێک بۆ نیشاندانی ئەنیمەیشنی خولانەوەی دوگمەکە
+    @State private var _isRefreshing = false
+    
     @FetchRequest(
         entity: AltSource.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
@@ -30,12 +33,39 @@ struct AppsView: View {
     var body: some View {
         NBNavigationView(.localized("Apps")) {
             VStack(spacing: 0) {
-                Picker("Categories", selection: $_selectedCategory) {
-                    Text("All").tag("All")
-                    Text("Games").tag("Games")
-                    Text("Apps").tag("Apps")
+                
+                // 💡 خستنە ناو HStack بۆ ئەوەی دوگمەکە بچێتە تەنیشت تابەکان
+                HStack(spacing: 12) {
+                    Picker("Categories", selection: $_selectedCategory) {
+                        Text("All").tag("All")
+                        Text("Games").tag("Games")
+                        Text("Apps").tag("Apps")
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    // 💡 دوگمەی نوێکردنەوە (Refresh)
+                    Button(action: {
+                        Task {
+                            _isRefreshing = true
+                            await viewModel.fetchSources(_sources, refresh: true)
+                            // کەمێک چاوەڕێ دەکات بۆ ئەوەی ئەنیمەیشنەکە بە جوانی دەربکەوێت
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            _isRefreshing = false
+                        }
+                    }) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.primary)
+                            .rotationEffect(Angle(degrees: _isRefreshing ? 360 : 0))
+                            .animation(
+                                _isRefreshing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                value: _isRefreshing
+                            )
+                            .padding(8)
+                            .background(Color(UIColor.secondarySystemFill))
+                            .clipShape(Circle())
+                    }
                 }
-                .pickerStyle(.segmented)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
                 .padding(.top, 4)
@@ -75,7 +105,7 @@ struct AppsView: View {
     }
     
     private func _addDefaultSource() {
-        let defaultURLString = "https://github.com/ios94/ashtejson/raw/refs/heads/main/ashtemobile94.json"
+        let defaultURLString = "https://github.com/ios94/ashtemobile/raw/refs/heads/main/ashtemobile94.json"
         guard let url = URL(string: defaultURLString) else { return }
         
         let newSource = AltSource(context: context)
